@@ -1,6 +1,6 @@
-// Step picker — Ark UI SegmentGroup, two visual variants:
-// - default: pill container with sliding gradient indicator
-// - inline:   bare digits, no background, indicator is just a subtle highlight
+// Step picker — Ark UI SegmentGroup rendered as a compact calculator keypad.
+// The `inline` hook is retained for the /control variant class while the
+// shared radio semantics and keyboard navigation stay inside Ark UI.
 //
 // Anatomy note: each segment requires THREE sub-parts — ItemText (label),
 // ItemControl (the actual clickable surface that wires up the selection),
@@ -27,6 +27,8 @@ export function StepPicker({ value, onChange, max = FALLBACK_CONFIG.maxSteps, di
       value={String(value)}
       onValueChange={(d) => onChange(Number(d.value))}
       disabled={disabled}
+      orientation="horizontal"
+      aria-label="Cantidad de pasos"
     >
       <SegmentGroup.Indicator className="sg-indicator" />
       {items.map((n) => (

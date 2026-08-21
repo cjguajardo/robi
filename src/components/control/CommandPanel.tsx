@@ -1,20 +1,20 @@
 // Command panel — iOS-style.
 // Pasos panel + d-pad movement grid in one row.
-// Single segmented pill for Acciones below.
+// Unified 3×2 quick-actions block below.
 //
 // Dpad semantics: arrows are kid-game controls.
 // Up = jump one block forward (always 1, the picker doesn't apply).
-// Left/Right = walk sideways `steps` blocks (picker applies, default 1).
+// Left/Right = walk sideways `steps` blocks (picker applies, UI default 3).
 // Down = stop. In-place rotation was removed — there's no button or
 // voice command for it anymore.
 
 import type { RobiCommand } from "@/types/robi";
 import { StepPicker } from "./StepPicker";
 import {
-  JumpIcon,
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  StopIcon,
+  MovementUpIcon,
+  MovementLeftIcon,
+  MovementRightIcon,
+  MovementStopIcon,
   HandIcon,
   MusicIcon,
   StarIcon,
@@ -52,7 +52,7 @@ export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Prop
               label="Saltar"
               onClick={() => onCommand({ type: "JUMP" })}
               disabled={disabled}
-              icon={<JumpIcon size={22} />}
+              icon={<MovementUpIcon size={24} className="movement-icon movement-icon-up" />}
               className="dpad-up"
               iconOnly
             />
@@ -60,7 +60,7 @@ export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Prop
               label="Caminar a la izquierda"
               onClick={() => onCommand({ type: "WALK_LEFT", steps })}
               disabled={disabled}
-              icon={<ArrowLeftIcon size={22} />}
+              icon={<MovementLeftIcon size={24} className="movement-icon movement-icon-left" />}
               className="dpad-left"
               iconOnly
             />
@@ -69,7 +69,7 @@ export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Prop
               label="Caminar a la derecha"
               onClick={() => onCommand({ type: "WALK_RIGHT", steps })}
               disabled={disabled}
-              icon={<ArrowRightIcon size={22} />}
+              icon={<MovementRightIcon size={24} className="movement-icon movement-icon-right" />}
               className="dpad-right"
               iconOnly
             />
@@ -77,7 +77,7 @@ export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Prop
               label="Detener"
               onClick={() => onCommand({ type: "STOP" })}
               disabled={disabled}
-              icon={<StopIcon size={18} />}
+              icon={<MovementStopIcon size={22} className="movement-icon movement-icon-stop" />}
               className="dpad-down"
               iconOnly
             />
@@ -85,8 +85,7 @@ export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Prop
         </div>
       </div>
 
-      <h2 className="section-title">Acciones</h2>
-      <div className="actions-pill card">
+      <section className="quick-actions card" aria-label="Acciones y contenido">
         <Pill
           label="Saludar"
           onClick={() => onCommand({ type: "GREET" })}
@@ -105,10 +104,6 @@ export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Prop
           disabled={disabled}
           icon={<StarIcon size={20} />}
         />
-      </div>
-
-      <h2 className="section-title">Contenido</h2>
-      <div className="actions-pill card">
         <Pill
           label="Chiste"
           onClick={() => onCommand({ type: "TELL_JOKE" })}
@@ -127,7 +122,7 @@ export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Prop
           disabled={disabled}
           icon={<FactIcon size={20} />}
         />
-      </div>
+      </section>
     </div>
   );
 }

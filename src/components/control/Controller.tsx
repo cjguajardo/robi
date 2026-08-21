@@ -50,7 +50,7 @@ export function Controller() {
   const [connected, setConnected] = useState(false);
   const [robiState, setRobiState] = useState<RobiState>("SLEEPING");
   const [paused, setPaused] = useState(false);
-  const [steps, setSteps] = useState(1);
+  const [steps, setSteps] = useState(3);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<number | null>(null);
@@ -197,7 +197,7 @@ export function Controller() {
 
       {/* Hero card — face + state + wake/mic */}
       <section className="control-hero card">
-        <RobiStateBadge state={paused ? "PAUSED" : robiState} size={132} />
+        <RobiStateBadge state={paused ? "PAUSED" : robiState} size={80} />
         <div className="hero-state">{stateLabel}</div>
         {isSleeping ? (
           <>

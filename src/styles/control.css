@@ -1,7 +1,7 @@
 /* Control view (/control) — phone UI for the presenter.
    Imported by src/pages/control.astro.
    All `.controller` / `.conn-*` / `.control-hero` / `.badge*` / `.wake-btn`
-   / `.mic*` / `.cmd-*` / `.sg-*` / `.dpad*` / `.pill` / `.actions-pill`
+   / `.mic*` / `.cmd-*` / `.sg-*` / `.dpad*` / `.pill` / `.quick-actions`
    / `.ripple` / `.activity-card` / `.history-*` / `.toaster` / `.toast*`
    rules belong to this view.
 
@@ -92,7 +92,7 @@ body::before {
     max(env(safe-area-inset-bottom), 16px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -195,7 +195,7 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   padding: 14px 16px 12px;
   text-align: center;
 }
@@ -208,6 +208,9 @@ body::before {
   position: relative;
   display: grid;
   place-items: center;
+  border-radius: 18px;
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .badge {
@@ -227,10 +230,11 @@ body::before {
   inset: 0;
   display: grid;
   place-items: center;
+  place-content: center;
   grid-template-columns: 6px 6px;
   gap: 6px;
   background: rgba(10, 20, 41, 0.5);
-  border-radius: 50%;
+  border-radius: inherit;
 }
 
 .badge-paused-overlay .bar {
@@ -423,8 +427,8 @@ body::before {
 .pasos-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 10px;
   justify-content: center;
 }
 
@@ -434,35 +438,26 @@ body::before {
   font-weight: 500;
 }
 
-/* SegmentGroup — inline (no container chrome) */
+/* SegmentGroup — calculator-style 1-2-3 / 4-5 keypad. Ark UI keeps
+   native radio semantics and keyboard navigation; the visible control
+   is a distinct 44px key rather than a row of bare digits. */
 .sg-root {
   position: relative;
-  display: inline-flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(32px, 1fr));
   padding: 0;
   background: transparent;
   border: none;
   box-shadow: none;
-  gap: 2px;
+  gap: 6px;
+  width: 100%;
   isolation: isolate;
 }
 
 .sg-root[data-disabled] { opacity: 0.45; }
 
 .sg-indicator {
-  position: absolute;
-  z-index: 0;
-  background: transparent;
-  box-shadow: none;
-  width: var(--width);
-  height: var(--height);
-  top: var(--top);
-  left: var(--left);
-  transition:
-    width  280ms var(--r-ease),
-    height 280ms var(--r-ease),
-    left   280ms var(--r-ease),
-    top    280ms var(--r-ease);
+  display: none;
 }
 
 .sg-item {
@@ -480,20 +475,28 @@ body::before {
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 30px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--r-fg-mute);
-  font-size: 16px;
-  font-weight: 600;
+  min-width: 32px;
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--r-fg-dim);
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: color 200ms;
+  transition: transform 90ms ease-out, color 90ms ease-out;
   user-select: none;
 }
 
-.sg-item-control[data-state="checked"] { color: var(--r-fg); }
+.sg-item-control[data-state="checked"] {
+  color: #00131e;
+  background: var(--r-accent);
+  border-color: var(--r-accent);
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.22);
+}
+
+.sg-item-control:active { transform: scale(0.94); }
 
 .sg-item-control[data-focus-visible] {
   outline: 2px solid var(--r-accent);
@@ -502,7 +505,8 @@ body::before {
 
 .sg-item-control[data-disabled] { cursor: not-allowed; }
 
-/* D-pad — pills in + cross pattern */
+/* D-pad — symmetric 3×3 cross. Fixed 48px cells preserve the touch
+   targets while keeping the same 156px total height as before. */
 .dpad-panel {
   padding: 10px;
   display: grid;
@@ -511,18 +515,23 @@ body::before {
 
 .dpad {
   display: grid;
-  grid-template-columns: 1fr 1.3fr 1fr;
-  grid-template-rows: auto auto auto;
+  grid-template-columns: repeat(3, 48px);
+  grid-template-rows: repeat(3, 48px);
+  justify-content: center;
   gap: 6px;
   width: 100%;
 }
 
-.dpad > .dpad-center { /* empty center cell */ }
+.dpad > .dpad-center {
+  grid-area: 2 / 2;
+  width: 48px;
+  height: 48px;
+}
 
-.dpad-up    { grid-area: 1 / 1 / 1 / span 3;       justify-self: stretch; }
-.dpad-left  { grid-area: 2 / 1 / span 1 / span 1;   justify-self: stretch; }
-.dpad-right { grid-area: 2 / 2 / span 1 / span 2;   justify-self: stretch; }
-.dpad-down  { grid-area: 3 / 1 / span 1 / span 3;   justify-self: stretch; }
+.dpad-up    { grid-area: 1 / 2; }
+.dpad-left  { grid-area: 2 / 1; }
+.dpad-right { grid-area: 2 / 3; }
+.dpad-down  { grid-area: 3 / 2; }
 
 /* Pill base — used by dpad, actions, emergency */
 .pill {
@@ -554,6 +563,11 @@ body::before {
   border-color: rgba(255, 255, 255, 0.18);
 }
 
+.pill:focus-visible {
+  outline: 3px solid var(--r-accent);
+  outline-offset: 2px;
+}
+
 .pill:active { transform: scale(0.96); }
 
 .pill:disabled {
@@ -582,13 +596,35 @@ body::before {
   width: 48px;
   height: 48px;
   padding: 0;
-  background: rgba(110, 231, 255, 0.10);
-  border-color: rgba(110, 231, 255, 0.25);
+  background: rgba(0, 212, 255, 0.13);
+  border-color: rgba(0, 212, 255, 0.42);
 }
 
 .pill.icon-only:hover {
-  background: rgba(110, 231, 255, 0.18);
-  border-color: rgba(110, 231, 255, 0.45);
+  background: rgba(0, 212, 255, 0.22);
+  border-color: rgba(0, 212, 255, 0.68);
+}
+
+/* Directional feedback starts immediately and only animates cheap
+   compositor properties. The longer sent-flash still confirms that
+   the command reached the handler. */
+.dpad .pill {
+  transition: transform 90ms ease-out, color 90ms ease-out;
+}
+
+.dpad .pill:active:not(:disabled) {
+  transform: scale(0.92);
+  color: var(--r-accent);
+}
+
+.dpad .dpad-down {
+  background: rgba(255, 69, 58, 0.14);
+  border-color: rgba(255, 69, 58, 0.42);
+}
+
+.dpad .dpad-down:hover {
+  background: rgba(255, 69, 58, 0.22);
+  border-color: rgba(255, 69, 58, 0.68);
 }
 
 .pill.icon-only .ic-wrap {
@@ -644,46 +680,41 @@ body::before {
   100% { opacity: 0; transform: scale(1.4); }
 }
 
-/* ===== Actions row — single pill containing all 3 ===== */
-.actions-pill {
-  display: flex;
-  align-items: stretch;
+/* ===== Unified quick actions — 3 columns × 2 rows ===== */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   padding: 4px;
-  gap: 0;
-  border-radius: var(--r-radius-pill);
+  gap: 1px;
+  border-radius: 18px;
+  overflow: hidden;
 }
 
-.actions-pill .pill {
-  flex: 1;
+.quick-actions .pill {
+  width: 100%;
   height: 40px;
   background: transparent;
   border: none;
-  border-radius: var(--r-radius-pill);
+  border-radius: 10px;
   font-size: 13.5px;
   font-weight: 500;
   gap: 6px;
+  padding: 0 8px;
 }
 
-.actions-pill .pill:hover {
+.quick-actions .pill:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.actions-pill .pill + .pill {
+.quick-actions .pill:nth-child(n + 4) {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.quick-actions .pill:not(:nth-child(3n + 1)) {
   border-left: 1px solid rgba(255, 255, 255, 0.08);
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
 }
 
-.actions-pill .pill:not(:first-child):not(:last-child) {
-  border-radius: 0;
-}
-
-.actions-pill .pill:first-child {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.actions-pill .pill .ic-wrap { width: 18px; height: 18px; opacity: 0.95; }
+.quick-actions .pill .ic-wrap { width: 18px; height: 18px; opacity: 0.95; }
 
 /* ===== Ripple ===== */
 .ripple {
@@ -736,6 +767,11 @@ body::before {
   background: rgba(8, 14, 30, 0.65);
   border-color: var(--r-border-strong);
   color: var(--r-fg);
+}
+
+.history-toggle:focus-visible {
+  outline: 3px solid var(--r-accent);
+  outline-offset: 2px;
 }
 
 .history-toggle:active { transform: scale(0.99); }

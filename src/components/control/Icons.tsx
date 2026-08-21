@@ -111,6 +111,36 @@ export const StopIcon = (p: IconProps) => (
   </Icon>
 );
 
+/* Uniform D-pad set: paired chevrons share the same geometry and
+   stroke language; Stop uses the same centered indicator footprint. */
+export const MovementUpIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m7 15 5-5 5 5" />
+    <path d="m7 20 5-5 5 5" />
+  </Icon>
+);
+
+export const MovementLeftIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m15 7-5 5 5 5" />
+    <path d="m20 7-5 5 5 5" />
+  </Icon>
+);
+
+export const MovementRightIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m9 7 5 5-5 5" />
+    <path d="m4 7 5 5-5 5" />
+  </Icon>
+);
+
+export const MovementStopIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="8" />
+    <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" fill="currentColor" stroke="none" />
+  </Icon>
+);
+
 /* ----- Actions ---- */
 export const HandIcon = (p: IconProps) => (
   <Icon {...p}>
