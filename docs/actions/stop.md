@@ -60,10 +60,9 @@ flowchart LR
 | T | Event | Reducer | Sprite |
 |---|---|---|---|
 | 0 | `EXECUTE {command: STOP}` | **IDLE** (directo, NO EXECUTING) | `idle` |
-| audio_end | `THINK` (content) | THINKING | `idle` |
-| post-audio | `COMPLETE` | IDLE | `idle` |
+| audio_end | `COMPLETE` (content) | IDLE | `idle` |
 
-`actionAnimationMs(STOP) = 0` — STOP NO está en `isActionCommand()`, así que el reducer va directo a THINK post-audio sin visual delay adicional.
+`actionAnimationMs(STOP) = 0` — STOP NO está en `isActionCommand()`, así que el reducer va directo a COMPLETE post-audio sin visual delay adicional.
 
 ## Posición y dirección
 

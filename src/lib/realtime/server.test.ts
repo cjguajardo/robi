@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   _resetForTesting,
+  _safetyTimerDurationMs,
   _setAudioTimeoutForTesting,
   attachPeer,
   detachPeer,
@@ -434,12 +435,16 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
     detachPeer(handle);
   });
 
-  it("SPEECH_ENDED drives the state back to THINKING for content commands", () => {
+  it("SPEECH_ENDED drives the state straight to IDLE for content commands", () => {
     // After audio playback ends, content commands (TELL_JOKE,
-    // TELL_RIDDLE, TELL_FACT, ANSWER_QUESTION, UNKNOWN, etc.) should
-    // fall back to the THINKING sprite briefly before COMPLETE → IDLE.
-    // ACTION commands (WALK / JUMP / DANCE / CELEBRATE / GREET / etc.)
-    // fall back to EXECUTING instead — see the next test.
+    // TELL_RIDDLE, TELL_FACT, ANSWER_QUESTION, UNKNOWN, etc.) skip
+    // the intermediate THINKING pose and go straight to IDLE. Earlier
+    // revisions bounced through THINKING here, but the intermediate
+    // broadcast left the avatar on the 4-frame thinking loop long
+    // enough to be visible — especially during the preamble→content
+    // gap of TELL_FACT and similar commands. ACTION commands
+    // (WALK / JUMP / DANCE / CELEBRATE / GREET / etc.) fall back to
+    // EXECUTING instead — see the next test.
     const { events, handle } = makePeer();
     attachPeer(handle);
     events.length = 0;
@@ -451,9 +456,13 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
     events.length = 0;
     ingestSpeechEvent("SPEECH_ENDED");
 
-    expect(events.some(
-      (e) => e.type === "STATE_CHANGED" && e.payload === "THINKING",
-    )).toBe(true);
+    const states = events
+      .filter((e) => e.type === "STATE_CHANGED")
+      .map((e) => (e as { type: "STATE_CHANGED"; payload: string }).payload);
+    // First non-action-content transition must be IDLE, never THINKING.
+    expect(states[0]).toBe("IDLE");
+    // And THINKING must NOT appear in the post-SPEECH_ENDED stream.
+    expect(states).not.toContain("THINKING");
     detachPeer(handle);
   });
 
@@ -482,6 +491,43 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
     detachPeer(handle);
   });
 
+  it("TELL_FACT state sequence ends at IDLE without lingering on THINKING (regression)", async () => {
+    // Regression for the bug where content commands bounced through
+    // THINKING on SPEECH_ENDED. The intermediate broadcast left the
+    // avatar on the 4-frame thinking loop long enough to be visible —
+    // especially during the preamble→content gap of TELL_FACT and
+    // similar commands, where the gap is preambleDurationMs +
+    // CONTENT_BUFFER_MS. Content commands must now go SPEAKING → IDLE.
+    const { events, handle } = makePeer();
+    attachPeer(handle);
+    events.length = 0;
+
+    ingestCommand({ type: "TELL_FACT" });
+
+    // Drive the preamble lifecycle.
+    ingestSpeechEvent("SPEECH_STARTED");
+    await new Promise((r) => setTimeout(r, 30));
+    ingestSpeechEvent("SPEECH_ENDED");
+    // Wait for the preamble gap.
+    await new Promise((r) => setTimeout(r, preambleGapMs("fact")));
+
+    // Drive the content lifecycle.
+    ingestSpeechEvent("SPEECH_STARTED");
+    await new Promise((r) => setTimeout(r, 30));
+    ingestSpeechEvent("SPEECH_ENDED");
+    await new Promise((r) => setTimeout(r, 200));
+
+    const states = events
+      .filter((e) => e.type === "STATE_CHANGED")
+      .map((e) => (e as { type: "STATE_CHANGED"; payload: string }).payload);
+
+    // Exact sequence: EXECUTING → SPEAKING → IDLE → SPEAKING → IDLE.
+    // THINKING must never appear. Final state is IDLE.
+    expect(states).not.toContain("THINKING");
+    expect(states[states.length - 1]).toBe("IDLE");
+    detachPeer(handle);
+  });
+
   it("SPEECH_ENDED unblocks drainQueue, releasing the queue lock", async () => {
     const { handle } = makePeer();
     attachPeer(handle);
@@ -507,14 +553,46 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
     detachPeer(handle);
   });
 
+  it("safety timer is sized off audio durationMs for long content audios (regression)", () => {
+    // Regression for the bug where the safety timer was a fixed 8s
+    // ceiling, but several pre-generated content audios exceed 8s
+    // (fact-01 is 13.2s, riddle-03 is 9.4s, joke-01 is 8.1s, joke-05
+    // is 9.0s — see sonidos/audios.json). With the fixed ceiling,
+    // the safety timer fired mid-playback for those audios, the
+    // drainQueue proceeded, and the kid heard the next command's
+    // SAY cut the previous audio off mid-sentence. Without the
+    // duration-aware sizing, every TELL_FACT/TELL_RIDDLE/TELL_JOKE
+    // rotation that landed on one of the long files would surface
+    // this warning in the server log and clip the audio.
+    //
+    // We pin the formula directly here — fast, no timer waiting,
+    // independent of which audio the rotation picks. beforeEach
+    // has set MAX_AUDIO_DURATION_MS to 200; restore the production
+    // ceiling so the unknown-duration assertion below checks the
+    // real fallback, not the test override.
+    _setAudioTimeoutForTesting(8000);
+    expect(_safetyTimerDurationMs(13200)).toBe(15200); // fact-01
+    expect(_safetyTimerDurationMs(9408)).toBe(11408); // riddle-03
+    expect(_safetyTimerDurationMs(8952)).toBe(10952); // joke-05
+    expect(_safetyTimerDurationMs(8112)).toBe(10112); // joke-01
+    // Short audios: still within the buffer-based formula.
+    expect(_safetyTimerDurationMs(1464)).toBe(3464); // walk-left-01
+    expect(_safetyTimerDurationMs(2016)).toBe(4016); // fact-preamble-01
+    // Unknown duration → falls back to MAX_AUDIO_DURATION_MS (8s).
+    expect(_safetyTimerDurationMs(undefined)).toBe(8000);
+  });
+
   it("safety timer kicks in if SPEECH_ENDED never arrives (no hang)", async () => {
     const { events, handle } = makePeer();
     attachPeer(handle);
     events.length = 0;
     ingestCommand({ type: "WALK_LEFT", steps: 1 });
     // We deliberately do NOT call ingestSpeechEvent("SPEECH_ENDED").
-    // Safety timer is 200ms in tests.
-    await new Promise((r) => setTimeout(r, 350));
+    // The safety timer is now sized off the picked audio's
+    // durationMs (walk-left-01.mp3 is ~1.5s) plus a 2s buffer
+    // (≈3.5s total). The MAX_AUDIO_DURATION_MS ceiling still applies
+    // when no duration is known — verified by separate tests below.
+    await new Promise((r) => setTimeout(r, 4000));
     // The safety timer should have fired and the command COMPLETEd.
     const states = events
       .filter((e) => e.type === "STATE_CHANGED")

@@ -193,7 +193,7 @@ async function drainQueue(): Promise<void> {
     }
 
     const answer = await llmPromise;
-    const answerWithAudio: { text: string; audioUrl?: string } =
+    const answerWithAudio: { text: string; audioUrl?: string; durationMs?: number } =
       answer.audioUrl
         ? answer
         : await synthesizeAnswerAudio(answer.text).then(
@@ -215,7 +215,15 @@ async function drainQueue(): Promise<void> {
     // (very short answer audio, pre-cached player) still has someone
     // to resolve. The waiter covers whichever audio actually plays
     // (pre-recorded or freshly synthesized).
-    const waiter = waitForSpeechEnded();
+    //
+    // ANSWER_QUESTION answers can be either catalog (fallback audio with
+    // known durationMs) or freshly synthesized (no known duration —
+    // synthesized server-side via TTS, base64 data URL). We size the
+    // safety timer off the catalog duration when known, and fall back
+    // to the 8s default ceiling otherwise. The freshly-synthesized
+    // path usually finishes inside that ceiling; the catalog path is
+    // 3-4s — well within.
+    const waiter = waitForSpeechEnded(answerWithAudio.durationMs);
     broadcast({ type: "SAY", payload: answerWithAudio });
     await waiter;
   } else if (
@@ -250,13 +258,17 @@ async function drainQueue(): Promise<void> {
       const preambleMs = preambleDurationMs(kind);
       await sleep(preambleMs + CONTENT_BUFFER_MS);
     }
+    // Size the waiter off the picked content's actual duration. Several
+    // catalog audios are 8-13s (fact-01 is 13.2s — see audios.json) and
+    // exceed the default 8s ceiling; without this, the safety timer
+    // fires mid-playback and the next command cuts the audio off.
     const phrase = responseForWithAudio(next);
-    const waiter = waitForSpeechEnded();
+    const waiter = waitForSpeechEnded(phrase.durationMs);
     broadcast({ type: "SAY", payload: phrase });
     await waiter;
   } else {
     const phrase = responseForWithAudio(next);
-    const waiter = waitForSpeechEnded();
+    const waiter = waitForSpeechEnded(phrase.durationMs);
     broadcast({ type: "SAY", payload: phrase });
     await waiter;
   }
@@ -432,13 +444,17 @@ async function synthesizeAnswerAudio(text: string): Promise<string> {
 }
 
 /**
- * Safety timeout for `waitForSpeechEnded`. If the client never sends
- * SPEECH_ENDED (display disconnected, browser tab killed, audio
- * decoding failed without firing `error`), the server must NOT hang
- * forever — kids would press buttons and nothing would happen.
+ * Safety timeout for `waitForSpeechEnded` when no audio duration is
+ * known. If the client never sends SPEECH_ENDED (display disconnected,
+ * browser tab killed, audio decoding failed without firing `error`),
+ * the server must NOT hang forever — kids would press buttons and
+ * nothing would happen.
  *
- * Tuned generously: most TTS responses are 2-5 seconds; preambles
- * 1-2 seconds. Anything over 8 seconds is broken pipeline.
+ * Sized for the dynamic-TTS fallback path (e.g. RESET's "Vuelvo al
+ * inicio."): the LLM/TTS response is typically 2-5s, so 8s is a
+ * generous ceiling. Pre-generated catalog audios carry their actual
+ * `durationMs` and `waitForSpeechEnded` sizes its safety timer off
+ * that instead — see AUDIO_SAFETY_BUFFER_MS below.
  *
  * Mutable via `_setAudioTimeoutForTesting` so unit tests don't wait
  * the full 8s between commands.
@@ -446,9 +462,32 @@ async function synthesizeAnswerAudio(text: string): Promise<string> {
 let MAX_AUDIO_DURATION_MS = 8000;
 
 /**
+ * Buffer added on top of an audio's known `durationMs` when sizing
+ * the per-audio safety timer. Covers WS roundtrip + browser audio
+ * decode tail + a little slack for slower displays. 2000ms is
+ * empirically generous: the WS roundtrip + `audio.ended` is well
+ * under 100ms on localhost; over a typical LAN it's still <500ms.
+ * Bump to 3000-4000 only if you ever observe the safety timer firing
+ * for an audio whose durationMs is set.
+ */
+const AUDIO_SAFETY_BUFFER_MS = 2000;
+
+/**
  * Wait until the client reports that the most recent SAY's audio has
  * finished playing. Falls back to a safety timeout so the queue can
  * always make progress.
+ *
+ * `expectedDurationMs`, when provided, sizes the safety timer to
+ * `expectedDurationMs + AUDIO_SAFETY_BUFFER_MS`. This matters for
+ * the pre-generated content audios, several of which exceed the
+ * default 8s ceiling (fact-01 is 13.2s, riddle-03 is 9.4s, etc. —
+ * see `sonidos/audios.json`). Without this, the safety timer fires
+ * mid-playback, the drainQueue proceeds, and the kid hears the next
+ * command's SAY cut the previous audio off mid-sentence.
+ *
+ * Pass `undefined` (or rely on the default) for the dynamic-TTS
+ * fallback path (no known duration); the `MAX_AUDIO_DURATION_MS`
+ * ceiling applies there.
  *
  * The resolver is set BEFORE broadcasting the SAY so a SPEECH_ENDED
  * that races ahead of broadcast (very short audio, cached player)
@@ -456,13 +495,29 @@ let MAX_AUDIO_DURATION_MS = 8000;
  * overwrites the previous waiter — designed for the preamble-then-
  * content / preamble-then-answer interleaved SAY pattern.
  */
-function waitForSpeechEnded(): Promise<void> {
+/**
+ * Test-only: compute the safety-timer duration for a given audio.
+ * Exposes the formula inside `waitForSpeechEnded` so tests can lock
+ * in the sizing without waiting for actual timers to fire. The
+ * production-side caller is `waitForSpeechEnded` — keep these in
+ * sync if the formula changes.
+ */
+export function _safetyTimerDurationMs(
+  expectedDurationMs: number | undefined,
+): number {
+  return expectedDurationMs !== undefined
+    ? expectedDurationMs + AUDIO_SAFETY_BUFFER_MS
+    : MAX_AUDIO_DURATION_MS;
+}
+
+function waitForSpeechEnded(expectedDurationMs?: number): Promise<void> {
+  const safetyMs = _safetyTimerDurationMs(expectedDurationMs);
   return new Promise((resolve) => {
     const safety = setTimeout(() => {
       console.warn("[server] audio playback timed out (no SPEECH_ENDED); proceeding");
       cleanup();
       resolve();
-    }, MAX_AUDIO_DURATION_MS);
+    }, safetyMs);
 
     function cleanup(): void {
       if (state.pendingAudioTimer === safety) {
@@ -482,8 +537,8 @@ function waitForSpeechEnded(): Promise<void> {
 
 /**
  * Called when the display reports an audio lifecycle event. Drives the
- * SPRITE state (THINKING ↔ SPEAKING ↔ action-specific) and unblocks
- * drainQueue's `waitForSpeechEnded` so the command can COMPLETE.
+ * SPRITE state (SPEAKING ↔ action-specific) and unblocks drainQueue's
+ * `waitForSpeechEnded` so the command can COMPLETE.
  *
  * Two types of behavior on SPEECH_ENDED:
  *   - ACTION command (WALK / JUMP / DANCE / CELEBRATE / GREET /
@@ -491,8 +546,14 @@ function waitForSpeechEnded(): Promise<void> {
  *     (walking / dancing / waving / etc.) plays out visibly until
  *     drainQueue's post-audio delay then COMPLETE.
  *   - CONTENT command (TELL_JOKE / TELL_RIDDLE / TELL_FACT /
- *     ANSWER_QUESTION / UNKNOWN): revert to THINKING (kid perceives
- *     ROBI as quiet / contemplating), then COMPLETE → IDLE shortly.
+ *     ANSWER_QUESTION / UNKNOWN): go straight to COMPLETE → IDLE.
+ *     Earlier revisions bounced through THINKING here, but the
+ *     intermediate broadcast left the avatar on the 4-frame thinking
+ *     loop long enough to be visible — especially during the
+ *     preamble→content gap of TELL_FACT and similar commands, where
+ *     the gap is `preambleDurationMs + CONTENT_BUFFER_MS` and the
+ *     thinking sprite clearly cycles. Skipping the THINK transition
+ *     keeps the kid's perception "ROBI is done talking, at rest."
  */
 export function ingestSpeechEvent(type: "SPEECH_STARTED" | "SPEECH_ENDED"): void {
   switch (type) {
@@ -505,12 +566,14 @@ export function ingestSpeechEvent(type: "SPEECH_STARTED" | "SPEECH_ENDED"): void
       // based on what the kid should SEE happening next:
       //   - ACTION commands revert to EXECUTING (sprite stays walking /
       //     dancing / celebrating while the visible animation plays out).
-      //   - CONTENT commands revert to THINKING (briefly before COMPLETE).
+      //   - CONTENT commands COMPLETE → IDLE directly. The reducer's
+      //     COMPLETE accepts SPEAKING as a valid source state, so the
+      //     avatar transitions SPEAKING → IDLE in one step.
       const lastCmd = state.lastCommand;
       if (lastCmd && isActionCommand(lastCmd)) {
         transition({ type: "RETURN_TO_EXECUTION" });
       } else {
-        transition({ type: "THINK" });
+        transition({ type: "COMPLETE" });
       }
       // ALWAYS resolve the drainQueue waiter, even if state is the
       // same (action commands). Without this, the queue hangs even

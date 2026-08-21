@@ -66,7 +66,7 @@ Only the rules that bite new contributors most often:
   helper until a second LLM-using command exists.
 - **Audio lifecycle depends on the display peer.** Server's
   `waitForSpeechEnded()` blocks on `SPEECH_ENDED` from the client. If
-  the display is down, the 8s safety timer keeps the queue moving.
+  the display is down, the audio-duration-aware safety timer (default 8s ceiling, or `audioDurationMs + 2s` for catalog audios) keeps the queue moving.
 - **Don't store anything persistent.** PRD §14: no DB, no auth, no
   cookies, no session history. Each command is stateless.
 - **Waiter pattern on preamble + content**: mount the

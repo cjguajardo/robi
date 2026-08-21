@@ -343,7 +343,7 @@ async function drainQueue(): Promise<void> {
 function waitForSpeechEnded(): Promise<void>
 ```
 
-Devuelve una Promise que resuelve cuando el display envía `SPEECH_ENDED`. Safety timer de **8s** (200ms en tests) por si el display nunca responde.
+Devuelve una Promise que resuelve cuando el display envía `SPEECH_ENDED`. Safety timer dinámico: `audioDurationMs + 2s` si el audio tiene duración conocida (catálogo), sino **8s** ceiling (TTS dinámico / tests). El buffer cubre WS roundtrip + audio decode tail + un poco de slack. La fórmula exacta está en `server.ts:AUDIO_SAFETY_BUFFER_MS`.
 
 **Regla crítica**: el waiter se monta **antes** de broadcastear el SAY que querés esperar, no después. Si llega un SPEECH_ENDED race-ahead, el resolver ya está listo para tomarlo. Pero la sobreescritura del resolver (entre preámbulo y contenido) es el detalle crítico — ver patrón §5.
 
@@ -394,7 +394,7 @@ function isActionCommand(cmd): boolean {
 ```
 
 - Action: en SPEECH_ENDED, `RETURN_TO_EXECUTION` mantiene el sprite (caminando, bailando, etc.) hasta el visualDelay
-- Content: en SPEECH_ENDED, `THINK` breve antes de `COMPLETE → IDLE`
+- Content: en SPEECH_ENDED, `COMPLETE` directo a IDLE. Versiones anteriores pasaban por THINKING (broadcast intermedio), pero ese rebote dejaba al avatar en el loop de 4 frames de "pensando" lo suficiente para ser visible — sobre todo durante el gap preamble→content de TELL_FACT y similares, donde el gap dura `preambleDurationMs + CONTENT_BUFFER_MS`. Skipear el THINK mantiene la percepción "ROBI terminó de hablar, está en reposo".
 
 ### 5.4 Command rejection
 
@@ -578,7 +578,7 @@ Tras el redesign del sprite (post-inicialización), JUMP y IDLE comparten celdas
 `broadcast()` itera sobre `state.peers` y falla silenciosamente en errores. Si el display está caído, los SAYs se pierden (no se queuean). El emergency path `ingestWorldEvent("PAUSE")` SIEMPRE funciona porque no depende del display.
 
 ### Audio lifecycle depende del display mandando SPEECH_ENDED
-Si el display peer nunca responde (browser tab cerrado, network caida, audio decoding fail), el `waitForSpeechEnded()` termina por safety timer (8s producción, 200ms tests). Esto unblocksa `drainQueue`. Si bajás el timer a < duración típica de audios, vas a cortar audios largos en producción.
+Si el display peer nunca responde (browser tab cerrado, network caida, audio decoding fail), el `waitForSpeechEnded()` termina por safety timer. El timer se dimensiona con `audioDurationMs + 2s` si la duración del audio es conocida (catálogo — ej. fact-01 es 13.2s), o con un ceiling fijo de 8s para TTS dinámico. Esto unblocksa `drainQueue`. Si bajás el ceiling a < duración típica de audios largos, vas a cortar audios en producción.
 
 ### El LRU de TTS es bounded (32 entradas)
 `synthesize.ts:CACHE.size >= 32` → descarta el más viejo. Para el MVP está bien (las frases frecuentes son ~15 y se cachean todas). Si crece el catálogo o aparecen frases LLM repetidas, considerá aumentar el cap o cambiar a LFU.

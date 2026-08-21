@@ -18,6 +18,9 @@ import {
   HandIcon,
   MusicIcon,
   StarIcon,
+  JokeIcon,
+  RiddleIcon,
+  FactIcon,
   CheckIcon,
 } from "./Icons";
 import { spawnRipple, flashSent } from "./ripple";
@@ -101,6 +104,28 @@ export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Prop
           onClick={() => onCommand({ type: "CELEBRATE" })}
           disabled={disabled}
           icon={<StarIcon size={20} />}
+        />
+      </div>
+
+      <h2 className="section-title">Contenido</h2>
+      <div className="actions-pill card">
+        <Pill
+          label="Chiste"
+          onClick={() => onCommand({ type: "TELL_JOKE" })}
+          disabled={disabled}
+          icon={<JokeIcon size={20} />}
+        />
+        <Pill
+          label="Adivinanza"
+          onClick={() => onCommand({ type: "TELL_RIDDLE" })}
+          disabled={disabled}
+          icon={<RiddleIcon size={20} />}
+        />
+        <Pill
+          label="Dato curioso"
+          onClick={() => onCommand({ type: "TELL_FACT" })}
+          disabled={disabled}
+          icon={<FactIcon size={20} />}
         />
       </div>
     </div>

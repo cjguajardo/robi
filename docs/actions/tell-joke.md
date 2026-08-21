@@ -74,8 +74,7 @@ Dos SAYs:
 | 0 | `EXECUTE` | `EXECUTING` | `speaking` (track) |
 | preámbulo_end | (waiter NO activo) | sin cambio | `speaking` |
 | preámbulo_end + 1.2s | SAY(content) broadcast | sin cambio | `speaking` |
-| chiste_end | `THINK` (content) | THINKING | `thinking` |
-| post-audio | `COMPLETE` | `IDLE` | `idle` |
+| chiste_end | `COMPLETE` | `IDLE` | `idle` |
 
 `actionAnimationMs(TELL_JOKE) = 0` (content command).
 
@@ -124,7 +123,7 @@ await waiter;                                     // gate para SPEECH_ENDED del 
 | Gap entre preámbulo y chiste muy largo/corto | Duración del MP3 en `sonidos/audios.json:durationMs` o `pnpm audios:durations` para regenerar. Buffer en `src/lib/realtime/server.ts:CONTENT_BUFFER_MS`. |
 | Chiste suena dos veces (preámbulo y contenido se repiten) | Bug en `drainQueue`. Verificar que solo hay 2 SAYs en la rama TELL_JOKE. |
 | Sprite no muestra `speaking` durante el chiste | `src/components/display/sprites.ts:spriteTrackFor()` case `TELL_JOKE` debe devolver `SPRITE_TRACKS.speaking`. |
-| El chiste no termina, queue se traba | Cliente no manda `SPEECH_ENDED`. Safety timer (8s) lo unblockea. Debug del cliente: `Robi.tsx` audio event listeners. |
+| El chiste no termina, queue se traba | Cliente no manda `SPEECH_ENDED`. Safety timer (`audioDurationMs + 2s`, o 8s para audios sin duración) lo unblockea. Debug del cliente: `Robi.tsx` audio event listeners. |
 
 ## Puntos de tweak
 

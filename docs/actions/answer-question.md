@@ -132,16 +132,15 @@ T=L+T+T+X  client audio ends → SPEECH_ENDED → drainQueue resumes
 |---|---|---|---|
 | 0 | `EXECUTE` | `EXECUTING` | `thinking` (mano en barbilla, espera LLM) |
 | preámbulo_start | `<audio>.play` → `SPEECH_STARTED` → `SPEAK` | SPEAKING | `speaking` (override) |
-| preámbulo_end | `SPEECH_ENDED` → `THINK` | THINKING | `thinking` |
+| preámbulo_end | `SPEECH_ENDED` → `COMPLETE` | IDLE | `idle` |
 | respuesta_start | `SPEAK` | SPEAKING | `speaking` |
-| respuesta_end | `THINK` (content) | THINKING | `thinking` |
-| post-delay | `COMPLETE` | IDLE | `idle` |
+| respuesta_end | `COMPLETE` (content) | IDLE | `idle` |
 
 `actionAnimationMs(ANSWER_QUESTION) = 0` (content command).
 
 ### Reducer vs Sprite: dos sistemas paralelos
 
-- **Reducer** mantiene THINKING entre SAYs (percepción: ROBI "piensa")
+- **Reducer** salta directo a IDLE al final del audio (sin pasar por THINKING)
 - **Sprite** cambia a SPEAKING durante CUALQUIER audio (mouth moving)
 
 Ver `src/lib/realtime/server.ts:ingestSpeechEvent()`.
@@ -215,7 +214,7 @@ Ver `src/components/display/sprites.ts:spriteTrackFor()` case `ANSWER_QUESTION` 
 | LLM retorna string vacío | Fallback del catálogo (gpt-4o-mini raramente, pero pasa). |
 | TTS call falla | Catch en `synthesizeAnswerAudio`. Cliente recibe SAY text-only, hace `/api/tts` (con LRU cache). |
 | Cliente hace `/api/tts` y la respuesta es muy larga | LRU cache miss → llamada a OpenAI. Latencia adicional ~2-5s. |
-| Display peer desconectado | El `waitForSpeechEnded()` safety timer (8s) termina el gate. `drainQueue` continúa. |
+| Display peer desconectado | El `waitForSpeechEnded()` safety timer (`audioDurationMs + 2s`, o 8s si la duración es desconocida) termina el gate. `drainQueue` continúa. |
 | Múltiples preguntas en queue | Solo 1 en vuelo (`state.processing`). Las demás esperan. |
 
 ## Diagnóstico de "ruido"
@@ -231,7 +230,7 @@ Si ANSWER_QUESTION se comporta raro, verificá en este orden:
 | Respuesta suena con voz equivocada | `src/lib/tts/synthesize.ts`: constante `voice = "fable"`. Cambiar TTS_VOICE env var. |
 | Cliente rebota a `/api/tts` por bug | `src/lib/realtime/server.ts:synthesizeAnswerAudio()` debería devolver data URL. Si no, SAY llega sin audioUrl. |
 | El sprite no vuelve a `thinking` | Cliente no envía SPEECH_ENDED. Display tiene error en su lifecycle. |
-| Estado no transiciona a IDLE | Safety timer (8s) está bloqueando `drainQueue`. |
+| Estado no transiciona a IDLE | Safety timer (audio-duration-aware, default 8s) está bloqueando `drainQueue`. |
 
 ### Si querés logs de debug
 

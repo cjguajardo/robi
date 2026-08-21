@@ -81,8 +81,7 @@ El cliente sintetiza con `/api/tts` (POST {text}). Si el TTS ya cacheó esta fra
 | T | Event | Reducer | Sprite |
 |---|---|---|---|
 | 0 | `EXECUTE {command: RESET}` | `IDLE` con `state.world = { ...initialWorld }` | `idle` |
-| audio_end (TTS) | `THINK` | THINKING | `idle` |
-| post-audio | `COMPLETE` | IDLE (sin cambio) | `idle` |
+| audio_end (TTS) | `COMPLETE` | IDLE (sin cambio) | `idle` |
 
 `actionAnimationMs(RESET) = 0` (content command). El reset es instantáneo en términos de reducer; solo espera al TTS.
 

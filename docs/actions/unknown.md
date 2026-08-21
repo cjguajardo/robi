@@ -76,8 +76,7 @@ Sin schema específico — UNKNOWN siempre pasa.
 | T | Event | Reducer | Sprite |
 |---|---|---|---|
 | 0 | `EXECUTE {command: UNKNOWN}` | **`CONFUSED`** (NO EXECUTING) | `confused` |
-| audio_end | `THINK` (content) | THINKING | `confused` (sigue brevemente) |
-| post-delay | `COMPLETE` | `IDLE` | `idle` |
+| audio_end | `COMPLETE` (content) | `IDLE` | `idle` |
 
 `actionAnimationMs(UNKNOWN) = 0` (content command).
 

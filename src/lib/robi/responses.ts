@@ -77,11 +77,27 @@ export interface RobiResponse {
   text: string;
   /** Pre-generated MP3 URL — undefined means "fall back to /api/tts". */
   audioUrl?: string;
+  /**
+   * Duration of the audio in milliseconds. Populated for catalog picks
+   * (where `audios.json:durationMs` is known); undefined for dynamic
+   * TTS fallbacks where duration depends on the synthesized speech.
+   *
+   * The server uses this to size the audio-lifecycle safety timer
+   * (see `waitForSpeechEnded`). Without it the timer falls back to a
+   * fixed 8s ceiling that the longer content audios (fact-01 is
+   * 13.2s, riddle-03 is 9.4s) exceed — see docs/actions/*.md and the
+   * safety-timer comment in `server.ts`.
+   */
+  durationMs?: number;
 }
 
 /** Internal helper: take an entry from the catalog, optional crossfade. */
 function fromEntry(entry: AudioEntry): RobiResponse {
-  return { text: entry.text, audioUrl: entry.audioUrl };
+  return {
+    text: entry.text,
+    audioUrl: entry.audioUrl,
+    durationMs: entry.durationMs,
+  };
 }
 
 /** Response for a successful command. */

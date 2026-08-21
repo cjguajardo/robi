@@ -143,6 +143,39 @@ export const HomeIcon = (p: IconProps) => (
   </Icon>
 );
 
+/* Joke — round smiling face with closed crescent eyes (^^) and a
+   wide open grin. Reads as "laughter" at 20px next to text labels. */
+export const JokeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9 10.5q-1.5 -2.5 -3 0" />
+    <path d="M15 10.5q1.5 -2.5 3 0" />
+    <path d="M8 14q4 5 8 0" />
+  </Icon>
+);
+
+/* Riddle — speech bubble with a tail pointing down-left and a
+   question mark inside. Distinguishes from JokeIcon (face) and
+   FactIcon (bulb) at a glance. */
+export const RiddleIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 4h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-5l-4 3 1-3H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+    <path d="M10.5 9.5a1.6 1.6 0 1 1 2 1.4c-.5.3-.8.8-.8 1.4" />
+    <circle cx="11.7" cy="14.5" r="0.55" fill="currentColor" stroke="none" />
+  </Icon>
+);
+
+/* Fact — classic incandescent bulb silhouette. Two horizontal lines
+   at the base form the screw threads. Reads as "idea/knowledge" —
+   the iconographic shorthand for "fun fact". */
+export const FactIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3a6 6 0 0 0-4 10.5c.6.7 1 1.6 1 2.5h6c0-.9.4-1.8 1-2.5A6 6 0 0 0 12 3z" />
+    <path d="M9.5 18h5" />
+    <path d="M10.5 20.5h3" />
+  </Icon>
+);
+
 /* ----- System ---- */
 export const PauseIcon = (p: IconProps) => (
   <Icon {...p}>

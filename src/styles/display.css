@@ -104,6 +104,7 @@
    (var(--z-far/mid/near)) would paint OVER the avatar (CSS step 7
    comes after step 6 where position:relative with z-index:auto lives). */
 .avatar-scaler {
+    top:-25px;
   position: relative;
   z-index: var(--z-robi);
   aspect-ratio: 2 / 3;
