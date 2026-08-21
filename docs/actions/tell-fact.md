@@ -15,7 +15,7 @@ flowchart LR
     subgraph SVR["🖥️ Server (server.ts:185)"]
         EXEC["EXECUTE"]
         BR1["SAY fact-preamble audioUrl"]
-        SLEEP["sleep 1200ms"]
+        SLEEP["sleep preambleMs + 100ms (dynamic)"]
         BR2["SAY fact audioUrl"]
         WAIT["waitForSpeechEnded"]
         COMP["COMPLETE → IDLE"]
@@ -68,7 +68,7 @@ flowchart LR
 | 1 (preámbulo) | `TELL_FACT_PREAMBLE` | `public/audio/fact-preamble-{01,02}.mp3` |
 | 2 (dato) | `FACT` | `public/audio/fact-{01..05}.mp3` (5 entries) |
 
-Gap: 1200ms.
+Gap: **`preambleDurationMs("fact") + 100ms`** (dinámico, ver [tell-joke.md](./tell-joke.md#audio)). Antes era un valor fijo de 1200ms que cortaba los preámbulos largos.
 
 ## State machine
 

@@ -31,6 +31,7 @@ import type { RobiCommand, RobiCommandType } from "@/types/robi";
 import {
   pick,
   tryPick,
+  entriesFor,
   type AudioEntry,
   type AudioCategory,
 } from "@/lib/robi/audio-catalog";
@@ -198,14 +199,47 @@ export function questionPreambleResponse(): RobiResponse | null {
 export function contentPreambleResponse(
   kind: "joke" | "riddle" | "fact",
 ): RobiResponse | null {
-  const cat: AudioCategory =
-    kind === "joke"
-      ? "TELL_JOKE_PREAMBLE"
-      : kind === "riddle"
-        ? "TELL_RIDDLE_PREAMBLE"
-        : "TELL_FACT_PREAMBLE";
+  const cat = preambleCategory(kind);
   const entry = tryPick(cat);
   return entry ? fromEntry(entry) : null;
+}
+
+/**
+ * Map a content-command kind to its preamble audio category.
+ * Exported so `preambleDurationMs` can use the same mapping.
+ */
+function preambleCategory(kind: "joke" | "riddle" | "fact"): AudioCategory {
+  return kind === "joke"
+    ? "TELL_JOKE_PREAMBLE"
+    : kind === "riddle"
+      ? "TELL_RIDDLE_PREAMBLE"
+      : "TELL_FACT_PREAMBLE";
+}
+
+/**
+ * Duration of the preamble audio for a content command, in
+ * milliseconds. Reads `durationMs` from the catalog entry — populated
+ * by `sonidos/durations.mjs` from `afinfo`.
+ *
+ * If the duration is missing in the JSON (backfill script hasn't run
+ * yet), falls back to a conservative default (1500ms). The +100ms
+ * buffer the server adds on top is documented in
+ * `docs/references.md` §"Waiter pattern (preamble + content)".
+ *
+ * Returns 0 if the catalog has no entry for the requested category
+ * (caller should treat that as "no preamble to wait for").
+ */
+export function preambleDurationMs(kind: "joke" | "riddle" | "fact"): number {
+  const cat = preambleCategory(kind);
+  const list = entriesFor(cat);
+  if (list.length === 0) return 0;
+  // The preamble was just picked (rotation rotates the counter), but
+  // we want a stable "average preamble duration" here, not whatever the
+  // next pick would be. Use the first available entry; durations are
+  // roughly similar across entries in the same category (~10% variance
+  // in our catalogs), so first-vs-average is a small error.
+  const entry = list[0];
+  return entry?.durationMs ?? 1500;
 }
 
 /** First question-fallback phrase as a plain string. Used by tests and

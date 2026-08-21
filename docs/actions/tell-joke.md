@@ -15,7 +15,7 @@ flowchart LR
     subgraph SVR["🖥️ Server (server.ts:185)"]
         EXEC["EXECUTE"]
         BR1["SAY preamble (audioUrl)"]
-        SLEEP["sleep 1200ms"]
+        SLEEP["sleep preambleMs + 100ms (dynamic)"]
         BR2["SAY joke (audioUrl)"]
         WAIT["waitForSpeechEnded"]
         COMP["COMPLETE → IDLE"]
@@ -65,7 +65,7 @@ Dos SAYs:
 | 1 (preámbulo) | `TELL_JOKE_PREAMBLE` | `public/audio/joke-preamble-{01,02}.mp3` | 2 entries |
 | 2 (chiste) | `JOKE` | `public/audio/joke-{01..07}.mp3` | 7 entries |
 
-**Gap fijo entre preámbulo y chiste: 1200ms** (`PREAMBLE_TO_CONTENT_DELAY_MS`).
+**Gap dinámico entre preámbulo y chiste: `preambleDurationMs("joke") + 100ms`**. El gap = la duración real del audio del preámbulo (de `audios.json`, poblada por `sonidos/durations.mjs`) más un buffer de 100ms para el roundtrip WS y el evento `audio.ended` del cliente. Antes era un valor fijo de 1200ms que cortaba los preámbulos largos a mitad de la última sílaba.
 
 ## State machine
 
@@ -92,7 +92,7 @@ const kind = next.type === "TELL_JOKE" ? "joke" : ...;
 const preamble = contentPreambleResponse(kind);  // tryPick("…_PREAMBLE")
 if (preamble) {
   broadcast({ type: "SAY", payload: preamble });   // NO waiter
-  await sleep(PREAMBLE_TO_CONTENT_DELAY_MS);      // 1200ms
+  await sleep(preambleDurationMs(kind) + CONTENT_BUFFER_MS);  // dynamic + 100ms
 }
 const phrase = responseForWithAudio(next);        // tryPick("JOKE")
 const waiter = waitForSpeechEnded();              // MOUNT AHORA
@@ -121,7 +121,7 @@ await waiter;                                     // gate para SPEECH_ENDED del 
 | Síntoma | Dónde mirar |
 |---|---|
 | Preámbulo no suena | `sonidos/audios/joke-preamble-NN.mp3` no existe. Correr `pnpm audios`. |
-| Gap entre preámbulo y chiste muy largo/corto | `src/lib/realtime/server.ts:PREAMBLE_TO_CONTENT_DELAY_MS` (línea 467, constante 1200). |
+| Gap entre preámbulo y chiste muy largo/corto | Duración del MP3 en `sonidos/audios.json:durationMs` o `pnpm audios:durations` para regenerar. Buffer en `src/lib/realtime/server.ts:CONTENT_BUFFER_MS`. |
 | Chiste suena dos veces (preámbulo y contenido se repiten) | Bug en `drainQueue`. Verificar que solo hay 2 SAYs en la rama TELL_JOKE. |
 | Sprite no muestra `speaking` durante el chiste | `src/components/display/sprites.ts:spriteTrackFor()` case `TELL_JOKE` debe devolver `SPRITE_TRACKS.speaking`. |
 | El chiste no termina, queue se traba | Cliente no manda `SPEECH_ENDED`. Safety timer (8s) lo unblockea. Debug del cliente: `Robi.tsx` audio event listeners. |
@@ -130,7 +130,7 @@ await waiter;                                     // gate para SPEECH_ENDED del 
 
 | Querés cambiar... | Archivo:línea |
 |---|---|
-| Gap preámbulo→chiste | `src/lib/realtime/server.ts:PREAMBLE_TO_CONTENT_DELAY_MS` |
+| Gap preámbulo→chiste | `src/lib/realtime/server.ts:CONTENT_BUFFER_MS` (100ms) o `preambleDurationMs("joke")` para la duración real. Audio se regenera con `pnpm audios`. |
 | Sprite durante el chiste | `src/components/display/sprites.ts:spriteTrackFor()` case `TELL_JOKE` |
 | Preámbulos | `sonidos/audios.json` `TELL_JOKE_PREAMBLE` + `pnpm audios` |
 | Chistes (texto/audio) | `sonidos/audios.json` `JOKE` + `pnpm audios` |

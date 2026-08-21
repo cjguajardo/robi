@@ -9,7 +9,18 @@ import {
   ingestWorldEvent,
   readSnapshot,
 } from "./server";
+import { preambleDurationMs } from "@/lib/robi/responses";
 import type { RealtimeEvent } from "@/types/robi";
+
+/**
+ * Helper: how long to wait for the dynamic preamble→content gap in
+ * tests. Reads the actual preamble duration from the catalog (so
+ * tests stay in sync with audios.json) and adds a small buffer for
+ * the test runtime overhead.
+ */
+function preambleGapMs(kind: "joke" | "riddle" | "fact"): number {
+  return preambleDurationMs(kind) + 200;
+}
 
 function makePeer() {
   const events: RealtimeEvent[] = [];
@@ -99,13 +110,13 @@ describe("realtime hub", () => {
     ingestCommand({ type: "TELL_JOKE" });
 
     // Drive the brief preamble audio to completion so drainQueue
-    // proceeds to the 1.2s gap + content SAY setup.
+    // proceeds to the dynamic preamble→content gap + content SAY setup.
     ingestSpeechEvent("SPEECH_STARTED");
     await new Promise((r) => setTimeout(r, 30));
     ingestSpeechEvent("SPEECH_ENDED");
     // Final audio lifecycle for the content SAY (the drainQueue will
-    // be waiting on this after the 1.2s gap).
-    await new Promise((r) => setTimeout(r, 1300));
+    // be waiting on this after the dynamic gap).
+    await new Promise((r) => setTimeout(r, preambleGapMs("joke")));
     ingestSpeechEvent("SPEECH_STARTED");
     await new Promise((r) => setTimeout(r, 30));
     ingestSpeechEvent("SPEECH_ENDED");
@@ -289,8 +300,8 @@ describe("realtime hub", () => {
     ingestSpeechEvent("SPEECH_STARTED");
     await new Promise((r) => setTimeout(r, 30));
     ingestSpeechEvent("SPEECH_ENDED");
-    // Content lifecycle
-    await new Promise((r) => setTimeout(r, 1300));
+    // Content lifecycle (dynamic gap based on actual preamble duration)
+    await new Promise((r) => setTimeout(r, preambleGapMs("riddle")));
     ingestSpeechEvent("SPEECH_STARTED");
     await new Promise((r) => setTimeout(r, 30));
     ingestSpeechEvent("SPEECH_ENDED");
@@ -316,7 +327,8 @@ describe("realtime hub", () => {
     ingestSpeechEvent("SPEECH_STARTED");
     await new Promise((r) => setTimeout(r, 30));
     ingestSpeechEvent("SPEECH_ENDED");
-    await new Promise((r) => setTimeout(r, 1300));
+    // Dynamic gap based on actual preamble duration
+    await new Promise((r) => setTimeout(r, preambleGapMs("fact")));
     ingestSpeechEvent("SPEECH_STARTED");
     await new Promise((r) => setTimeout(r, 30));
     ingestSpeechEvent("SPEECH_ENDED");

@@ -13,6 +13,7 @@ import { validateCommand } from "@/lib/robi/validator";
 import { SERVER_CONFIG } from "@/lib/robi/config.server";
 import {
   contentPreambleResponse,
+  preambleDurationMs,
   questionPreambleResponse,
   responseForWithAudio,
 } from "@/lib/robi/responses";
@@ -224,10 +225,19 @@ async function drainQueue(): Promise<void> {
   ) {
     // For the canned content commands: play a brief preamble first,
     // then the actual joke/riddle/fact. The preamble sets expectation
-    // ("Want to hear a joke?") and the gap (~1.2s) feels like the
-    // pause a storyteller takes before the punchline. If no preamble
-    // audios exist yet for that category, we skip it and just play
-    // the content alone — the user can run `pnpm audios` later.
+    // ("Want to hear a joke?"). The gap between preamble and content
+    // is the preamble audio duration + 100ms buffer — the buffer
+    // covers the WebSocket round-trip + client audio-end event so the
+    // client's `stopAudio()` doesn't cut the preamble mid-sentence
+    // (which it would if we waited exactly the audio length).
+    //
+    // If no preamble audios exist yet for that category, we skip the
+    // preamble and just play the content alone — the user can run
+    // `pnpm audios` later. If the backfill script (`pnpm audios:durations`)
+    // hasn't been run yet, `preambleDurationMs()` falls back to a
+    // conservative 1500ms default; the audio will play to the end of
+    // the catalog entry but the content SAY may broadcast slightly
+    // before/after the audio actually stops.
     const kind =
       next.type === "TELL_JOKE"
         ? "joke"
@@ -237,7 +247,8 @@ async function drainQueue(): Promise<void> {
     const preamble = contentPreambleResponse(kind);
     if (preamble) {
       broadcast({ type: "SAY", payload: preamble });
-      await sleep(PREAMBLE_TO_CONTENT_DELAY_MS);
+      const preambleMs = preambleDurationMs(kind);
+      await sleep(preambleMs + CONTENT_BUFFER_MS);
     }
     const phrase = responseForWithAudio(next);
     const waiter = waitForSpeechEnded();
@@ -517,7 +528,19 @@ export function ingestSpeechEvent(type: "SPEECH_STARTED" | "SPEECH_ENDED"): void
  * like ROBI stalled. Tuned to typical Spanish preamble audio length
  * (~1-2s) plus a small beat to separate the two voices.
  */
-const PREAMBLE_TO_CONTENT_DELAY_MS = 1200;
+/**
+ * Buffer added on top of the preamble audio duration before
+ * broadcasting the content SAY for TELL_JOKE/RIDDLE/FACT. Covers
+ * the WebSocket round-trip + the client's `audio.ended` event firing
+ * + browser audio decode tail. Without this, `playSay()` on the client
+ * calls `stopAudio()` while the preamble is still fading out — kid
+ * hears the last syllable cut.
+ *
+ * 100ms is empirically enough: typical WS roundtrip + audio.end
+ * latency in browser <80ms. Bump to 150-200 if you ever switch to
+ * lower-bitrate mp3s where the tail stretches.
+ */
+const CONTENT_BUFFER_MS = 100;
 
 // Re-export so consumers can do everything from one module if they like.
 export type { RobiState, Position };

@@ -25,6 +25,17 @@ export interface AudioEntry {
   text: string;
   /** Resolved public URL — `/audio/${filename}`. */
   audioUrl: string;
+  /**
+   * Audio duration in milliseconds. Source: audios.json `durationMs`,
+   * populated by `sonidos/durations.mjs` (afinfo) on demand. Used by
+   * the server to compute dynamic wait time between preamble and
+   * content SAYs for TELL_JOKE/RIDDLE/FACT.
+   *
+   * Optional because audios.json might lack the field if the backfill
+   * script hasn't been run yet; callers that need it fall back to a
+   * safe default.
+   */
+  durationMs?: number;
 }
 
 /** Granular category — every audios.json entry maps 1:1 to one of these. */
@@ -55,6 +66,8 @@ interface PhraseJson {
   filename: string;
   category: AudioCategory;
   text: string;
+  /** Optional — populated by `sonidos/durations.mjs` from `afinfo`. */
+  durationMs?: number;
 }
 
 interface CatalogJson {
@@ -83,6 +96,11 @@ function buildCatalog(): Partial<Record<AudioCategory, AudioEntry[]>> {
       filename: phrase.filename,
       text: phrase.text,
       audioUrl: `/audio/${phrase.filename}`,
+      // durationMs is optional in the JSON; the backfill script
+      // (`sonidos/durations.mjs`) populates it. Older audios.json
+      // files without it will leave this undefined and the server
+      // falls back to PREAMBLE_TO_CONTENT_DELAY_MS_DEFAULT.
+      durationMs: phrase.durationMs,
     };
     (byCategory[phrase.category] ??= []).push(entry);
   }

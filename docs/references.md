@@ -364,7 +364,7 @@ Devuelve una Promise que resuelve cuando el display envía `SPEECH_ENDED`. Safet
 
 ```
 broadcast SAY(preamble)  // NO waiter
-sleep(PREAMBLE_TO_CONTENT_DELAY_MS)  // 1200ms
+sleep(preambleDurationMs(kind) + CONTENT_BUFFER_MS)  // dynamic per-audio + 100ms buffer
 waiter = waitForSpeechEnded()
 broadcast SAY(content)   // waiter cubre ESTE
 await waiter

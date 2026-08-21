@@ -15,7 +15,7 @@ flowchart LR
     subgraph SVR["🖥️ Server (server.ts:185)"]
         EXEC["EXECUTE"]
         BR1["SAY riddle-preamble audioUrl"]
-        SLEEP["sleep 1200ms"]
+        SLEEP["sleep preambleMs + 100ms (dynamic)"]
         BR2["SAY riddle audioUrl"]
         WAIT["waitForSpeechEnded"]
         COMP["COMPLETE → IDLE"]
@@ -65,7 +65,7 @@ Dos SAYs:
 | 1 (preámbulo) | `TELL_RIDDLE_PREAMBLE` | `public/audio/riddle-preamble-{01,02}.mp3` |
 | 2 (adivinanza) | `RIDDLE` | `public/audio/riddle-{01..05}.mp3` (5 entries) |
 
-Gap: 1200ms (igual que TELL_JOKE/FACT).
+Gap: **`preambleDurationMs("riddle") + 100ms`** (dinámico, mismo patrón que TELL_JOKE/FACT — ver [tell-joke.md](./tell-joke.md#audio)). Antes era un valor fijo de 1200ms que cortaba los preámbulos largos.
 
 ## State machine
 
