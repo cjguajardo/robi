@@ -18,6 +18,17 @@ import { RobiStatus } from "./RobiStatus";
 
 const WS_PATH = "/ws";
 
+/**
+ * Shortest valid silent WAV (~50 bytes). Used to "prime" the DOM-attached
+ * <audio> element during a user gesture: the browser allows play() inside
+ * a click handler only, so we play a silent buffer once and then every
+ * subsequent `audio.play()` (triggered by WS SAY events) bypasses the
+ * autoplay policy. Data URL keeps the unlock self-contained — no extra
+ * asset to ship.
+ */
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRhYAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
 function buildWsUrl(): string {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
   return `${proto}://${window.location.host}${WS_PATH}`;
@@ -45,6 +56,15 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
   /** Tracks a blob URL we created from /api/tts so we can revoke it. */
   const blobUrlRef = useRef<string | null>(null);
   const speechTimer = useRef<number | null>(null);
+  /**
+   * Tracks whether the <audio> element has been "primed" via a user
+   * gesture. False until the operator clicks the unlock button — every
+   * browser autoplay policy (Chrome / Safari / Firefox) rejects
+   * `audio.play()` with "user didn't interact" until then, and the
+   * existing `.catch(() => {})` in playSay was swallowing the
+   * rejection, which is why audios appeared to load but not play.
+   */
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
 
   const handleEvent = (event: RealtimeEvent) => {
     switch (event.type) {
@@ -165,6 +185,40 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
       wsRef.current.readyState === WebSocket.OPEN
     ) {
       wsRef.current.send(JSON.stringify({ type }));
+    }
+  };
+
+  /**
+   * "Prime" the DOM-attached <audio> element inside a user gesture so
+   * the browser's autoplay policy lets subsequent `audio.play()` calls
+   * through. Without this, the first WS SAY after the page loads hits
+   * the policy and `play()` rejects silently (the catch in playSay
+   * intentionally swallows it). The /display page in a kiosk/proyector
+   * setup has NO organic user interaction — kids press buttons on a
+   * separate control device, not on the projector tab — so we provide
+   * an explicit one-tap button instead of relying on first-gesture
+   * detection.
+   *
+   * Pattern: set src to a tiny silent WAV (data URL — no extra asset
+   * to ship), call play() inside the click handler, then reset src to
+   * empty so the next real SAY can overwrite cleanly. The browser
+   * remembers the element was started in a gesture and lifts the policy
+   * for the lifetime of the page.
+   */
+  const unlockAudio = async () => {
+    const audio = audioRef.current;
+    if (!audio || audioUnlocked) return;
+    audio.src = SILENT_WAV;
+    try {
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = "";
+      setAudioUnlocked(true);
+    } catch {
+      // Shouldn't happen — this handler runs inside a click event. If
+      // it does, leave audioUnlocked=false so the operator can retry.
+      audio.src = "";
     }
   };
 
@@ -321,6 +375,24 @@ const transitionMs = useMemo<number>(() => {
       <div className="conn" data-connected={connected}>
         {connected ? "🟢 conectado" : "🔴 sin conexión"}
       </div>
+      {/* Audio unlock — persistent button (option C). The browser's
+          autoplay policy rejects audio.play() until there's been a user
+          gesture on this document; the /display page has none (kids
+          press buttons on a separate control device), so we expose this
+          as a one-tap manual unlock. Visual state reflects unlock so
+          the operator knows audio is armed. Persistent (not hidden
+          after click) so a refocused tab / context-restored session
+          can re-prime without a page reload. */}
+      <button
+        type="button"
+        className="audio-unlock"
+        onClick={unlockAudio}
+        aria-label={audioUnlocked ? "Audio activado" : "Activar audio"}
+        data-unlocked={audioUnlocked}
+        disabled={audioUnlocked}
+      >
+        {audioUnlocked ? "🔊 Audio listo" : "🔊 Activar audio"}
+      </button>
       {/* Brand mark — top-center, subtle, doesn't compete with the
           avatar or the speech bubble. Hidden on very small viewports
           via .display-logo { display: none } in @media. */}

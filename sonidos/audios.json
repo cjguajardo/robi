@@ -370,7 +370,8 @@
       "rhythm": "Medium-fast, with the closing \"¿sí?\" asking for cooperation.",
       "emphasis": "\"Buena\" (genuine praise), \"segundo\" (the brief time-bridge).",
       "pauses": "Small pause between \"pregunta\" and \"Dame\".",
-      "details": "Same role as question-preamble-01: fills the silence while the LLM responds. The praise (\"Buena pregunta!\") makes the kid feel heard even before the answer arrives."
+      "details": "Same role as question-preamble-01: fills the silence while the LLM responds. The praise (\"Buena pregunta!\") makes the kid feel heard even before the answer arrives.",
+      "durationMs": 4752
     },
     {
       "_comment_content": "The 17 phrases below live in src/lib/robi/responses.ts (the JOKES, RIDDLES, FACTS arrays). They share a category-level TTS instruction shape so the same cadence/prosody plays across all jokes/riddles/facts while the TEXT itself varies.",

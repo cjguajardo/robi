@@ -43,6 +43,12 @@ const MIME = {
   jpeg: "image/jpeg",
   gif: "image/gif",
   ico: "image/x-icon",
+  // MP3 served as audio/mpeg — required for `<audio>` decoding to
+  // work cleanly across browsers (Chrome and Firefox accept
+  // octet-stream via content sniffing, but Safari and embedded WebViews
+  // can refuse without the explicit type). All catalog phrases and
+  // the TTS fallback use this extension.
+  mp3: "audio/mpeg",
   woff: "font/woff",
   woff2: "font/woff2",
   txt: "text/plain; charset=utf-8",

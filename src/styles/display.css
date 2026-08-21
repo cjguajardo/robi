@@ -154,6 +154,48 @@
   border-radius: 999px;
 }
 
+/* Audio unlock — persistent button (option C). Sits in the top-right
+   corner so it doesn't crowd the logo (top-center) or the connection
+   pill (top-left). Uses the same chrome z-layer as the conn/logo so it
+   sits above the parallax but below the speech bubble. `--accent` is
+   the same cyan the logo's hover glow uses, so the button reads as
+   part of the chrome family. Faded when armed so it doesn't pull
+   focus from the avatar, but still present so a refocused tab can
+   re-prime without a reload. */
+.audio-unlock {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: var(--z-chrome);
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: opacity 180ms ease, background-color 180ms ease;
+}
+.audio-unlock:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+.audio-unlock:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.audio-unlock[data-unlocked="true"] {
+  opacity: 0.45;
+  cursor: default;
+  border-color: color-mix(in srgb, var(--ok) 50%, transparent);
+}
+.audio-unlock[data-unlocked="true"]:hover {
+  /* Hover on the locked-in state still nudges opacity so the operator
+     gets feedback that the button is responsive (e.g. refocused tab). */
+  opacity: 0.75;
+  background: rgba(0, 0, 0, 0.4);
+}
+
 /* Brand mark — top-center, small enough not to compete with the
    speech bubble (which sits at 10% from top) or the avatar at the
    bottom. Pure decoration; the aria-hidden + empty alt means it
