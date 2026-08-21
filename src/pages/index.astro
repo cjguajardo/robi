@@ -1,0 +1,19 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="ROBI">
+    <main class="hero">
+        <img src="/logo.webp" alt="ROBI — El amigo del aula" class="hero-logo" width="242" height="128" />
+        <p>Robot interactivo por voz para presentación escolar.</p>
+        <div class="links">
+            <a href="/display" class="btn primary">Proyector · /display</a>
+            <a href="/control" class="btn">Teléfono · /control</a>
+        </div>
+        <p class="hint">
+            Abre <strong>/display</strong> en el computador del proyector y
+            <strong>/control</strong> en el teléfono del presentador. Comparten sesión
+            automáticamente si están en la misma red.
+        </p>
+    </main>
+</BaseLayout>

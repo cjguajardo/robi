@@ -1,0 +1,144 @@
+/* Global styles. Loaded by BaseLayout on every route.
+   Design tokens, viewport setup, base typography, and shared primitives
+   live here. View-specific styles live in styles/display.css and
+   styles/control.css. */
+
+/* ===== Design tokens ===== */
+:root {
+  /* Color palette — used by display.css and the home page. */
+  --bg: #0b1020;
+  --bg-soft: #121933;
+  --fg: #f6f7fb;
+  --fg-dim: #9aa3c0;
+  --accent: #6ee7ff;
+  --warn: #ffb86b;
+  --ok: #6bff9a;
+  --bad: #ff6b8b;
+
+  /* Sprite display height — consumed by display.css. Cell aspect ratio
+     is 2:3 so width auto-derives via aspect-ratio. */
+  --sprite-height: 360px;
+
+  /* Z-index stack — declared in :root so the layering intent is
+     self-documenting and a single source of truth. Used by display.css.
+
+     CSS painting order: positioned elements without z-index (or with
+     z-index: auto) paint in step 6, BEFORE positioned elements with
+     explicit positive z-index (step 7). Without these variables, the
+     parallax layers (--z-far/mid/near) would paint OVER the avatar
+     because .avatar-scaler is position:relative with z-index:auto.
+     With explicit z-index on every overlay (--z-robi/overlay/chrome),
+     the avatar and chrome always win the stacking contest.
+
+     Reserve gaps in the scale (10, 20, 100) so future layers can slot
+     in without renumbering existing ones. */
+  --z-far: 1;       /* parallax sky */
+  --z-mid: 2;       /* parallax scene */
+  --z-near: 3;      /* parallax floor */
+  --z-robi: 10;     /* ROBI avatar — must be above all layers */
+  --z-overlay: 20;  /* speech bubble, status pill */
+  --z-chrome: 30;   /* conn status, brand logo */
+  --z-modal: 100;   /* future modals / dialogs */
+}
+
+@media (max-width: 600px) {
+  :root {
+    --sprite-height: 128px;
+  }
+}
+
+/* ===== Reset ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+}
+
+/* ===== Home page (/index) =====
+   Only used by the landing page. Loaded globally because BaseLayout
+   imports global.css on every route. Move to a dedicated home.css if
+   a second consumer appears. */
+.hero {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 64px 20px;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: clamp(48px, 10vw, 96px);
+  margin: 0 0 12px;
+  letter-spacing: -0.04em;
+  background: linear-gradient(120deg, var(--accent), var(--ok));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Brand logo on the home page. Replaces the gradient h1 — the
+   logo image IS the brand mark here, no need to duplicate it
+   with text. Glow shadow matches the cyan accent for cohesion. */
+.hero-logo {
+  display: block;
+  width: clamp(180px, 50vw, 280px);
+  height: auto;
+  margin: 0 auto 18px;
+  filter: drop-shadow(0 8px 24px rgba(110, 231, 255, 0.25));
+}
+
+.hero p {
+  color: var(--fg-dim);
+  font-size: 17px;
+  margin: 0 0 32px;
+}
+
+.links {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 14px 24px;
+  border-radius: 12px;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.hint {
+  font-size: 14px;
+  line-height: 1.5;
+}

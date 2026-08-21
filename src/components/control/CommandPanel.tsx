@@ -1,0 +1,153 @@
+// Command panel — iOS-style.
+// Pasos panel + d-pad movement grid in one row.
+// Single segmented pill for Acciones below.
+//
+// Dpad semantics: arrows are kid-game controls.
+// Up = jump one block forward (always 1, the picker doesn't apply).
+// Left/Right = walk sideways `steps` blocks (picker applies, default 1).
+// Down = stop. In-place rotation was removed — there's no button or
+// voice command for it anymore.
+
+import type { RobiCommand } from "@/types/robi";
+import { StepPicker } from "./StepPicker";
+import {
+  JumpIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  StopIcon,
+  HandIcon,
+  MusicIcon,
+  StarIcon,
+  CheckIcon,
+} from "./Icons";
+import { spawnRipple, flashSent } from "./ripple";
+
+interface Props {
+  steps: number;
+  onStepsChange: (n: number) => void;
+  onCommand: (cmd: RobiCommand) => void;
+  disabled?: boolean;
+}
+
+export function CommandPanel({ steps, onStepsChange, onCommand, disabled }: Props) {
+  return (
+    <div className="cmd-stack">
+      <h2 className="section-title">Movimiento</h2>
+      <div className="mov-row">
+        <div className="card pasos-panel">
+          <span className="pasos-label">Pasos</span>
+          <StepPicker
+            value={steps}
+            onChange={onStepsChange}
+            disabled={disabled}
+            inline
+          />
+        </div>
+        <div className="card dpad-panel">
+          <div className="dpad">
+            <Pill
+              label="Saltar"
+              onClick={() => onCommand({ type: "JUMP" })}
+              disabled={disabled}
+              icon={<JumpIcon size={22} />}
+              className="dpad-up"
+              iconOnly
+            />
+            <Pill
+              label="Caminar a la izquierda"
+              onClick={() => onCommand({ type: "WALK_LEFT", steps })}
+              disabled={disabled}
+              icon={<ArrowLeftIcon size={22} />}
+              className="dpad-left"
+              iconOnly
+            />
+            <div className="dpad-center" />
+            <Pill
+              label="Caminar a la derecha"
+              onClick={() => onCommand({ type: "WALK_RIGHT", steps })}
+              disabled={disabled}
+              icon={<ArrowRightIcon size={22} />}
+              className="dpad-right"
+              iconOnly
+            />
+            <Pill
+              label="Detener"
+              onClick={() => onCommand({ type: "STOP" })}
+              disabled={disabled}
+              icon={<StopIcon size={18} />}
+              className="dpad-down"
+              iconOnly
+            />
+          </div>
+        </div>
+      </div>
+
+      <h2 className="section-title">Acciones</h2>
+      <div className="actions-pill card">
+        <Pill
+          label="Saludar"
+          onClick={() => onCommand({ type: "GREET" })}
+          disabled={disabled}
+          icon={<HandIcon size={20} />}
+        />
+        <Pill
+          label="Bailar"
+          onClick={() => onCommand({ type: "DANCE" })}
+          disabled={disabled}
+          icon={<MusicIcon size={20} />}
+        />
+        <Pill
+          label="Celebrar"
+          onClick={() => onCommand({ type: "CELEBRATE" })}
+          disabled={disabled}
+          icon={<StarIcon size={20} />}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Unified pill — used by d-pad, actions, and emergency              */
+/* ------------------------------------------------------------------ */
+
+function Pill({
+  label,
+  onClick,
+  disabled,
+  className = "",
+  icon,
+  iconOnly = false,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+  icon: React.ReactNode;
+  /** Hide the text label — used for icon-only buttons (dpad). */
+  iconOnly?: boolean;
+}) {
+  const handle = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+    spawnRipple(e);
+    flashSent(e.currentTarget);
+    onClick();
+  };
+
+  return (
+    <button
+      type="button"
+      className={`pill ${className} ${iconOnly ? "icon-only" : ""}`}
+      onClick={handle}
+      disabled={disabled}
+      aria-label={label}
+      title={iconOnly ? label : undefined}
+    >
+      <span className="ic-wrap">
+        {icon}
+        <CheckIcon size={12} className="sent-check" />
+      </span>
+      {!iconOnly && <span className="lb">{label}</span>}
+    </button>
+  );
+}

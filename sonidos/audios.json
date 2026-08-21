@@ -1,0 +1,515 @@
+{
+  "_comment_config": "Voice settings — must match the OpenAI playground selectors in the UI. Speed 1.0 is the model default.",
+  "config": {
+    "model": "gpt-4o-mini-tts",
+    "voice": "fable",
+    "speed": 1.0,
+    "format": "MP3"
+  },
+  "_comment_global": "Pasted once into the OpenAI 'Instructions' field. The script will re-paste this before every phrase (OpenAI's UI clears it between edits). Each phrase's `tone/rhythm/emphasis/pauses/details` gets appended below it, separated by a blank line, so the model sees the global personality + the per-phrase shape every time.",
+  "globalInstructions": "You speak as ROBI, a friendly robot for 6 to 7 year-old children. Your voice is warm, approachable, and expressive — like a big friend who comes down to the kids' level. Speak in neutral Spanish close to Chilean semi-formal: use tuteo (tú, tienes, sabes), no voseo or ustedeo (kids are peers, not authorities). The cadence is slightly melodic in the Chilean style — more sing-song than flat neutral Spanish, but without regional slang (avoid \"cachai\", \"po\", \"weón\"). Short sentences. Use affectionate exclamations (¡Mira!, ¡Qué bueno!, ¡Vamos!, ¡Excelente!) but don't shout or be cheesy. When celebrating an achievement, the pride is always in the kids, never in yourself: \"Lo hicieron genial\", not \"Lo hice bien\". When something doesn't go as expected, you get confused honestly and propose to keep trying — failure becomes play, not tragedy. Never use technical jargon or provider names. Smile with your voice.",
+  "_comment_phrases": "Each phrase entry has: filename (where to save the MP3), category (debug/group), text (what ROBI says, in Spanish), and 5 structured fields (tone, rhythm, emphasis, pauses, details) that the script concatenates into a single string and pastes into the Instructions field BELOW the global. 56 phrases total — 39 from scripts.md, plus 17 content phrases (7 jokes, 5 riddles, 5 facts) read from src/lib/robi/responses.ts.",
+  "phrases": [
+    {
+      "filename": "walk-left-01.mp3",
+      "category": "WALK_LEFT",
+      "text": "¡A la izquierda!",
+      "tone": "Quick acknowledgment, decisive.",
+      "rhythm": "Fast.",
+      "emphasis": "\"izquierda\".",
+      "pauses": "None.",
+      "details": "A one-word acknowledgment — like the sound effect of an arrow button. The shortest possible confirmation that the kid pressed left."
+    },
+    {
+      "filename": "walk-right-01.mp3",
+      "category": "WALK_RIGHT",
+      "text": "¡A la derecha!",
+      "tone": "Quick acknowledgment, decisive.",
+      "rhythm": "Fast.",
+      "emphasis": "\"derecha\".",
+      "pauses": "None.",
+      "details": "A one-word acknowledgment, mirror of izquierda — same energy, opposite direction."
+    },
+    {
+      "filename": "jump-01.mp3",
+      "category": "JUMP",
+      "text": "¡Hopp!",
+      "tone": "Onomatopoeic, springy.",
+      "rhythm": "Fast, with the word rising in pitch.",
+      "emphasis": "The whole word, extended vowel: \"Hoop\".",
+      "pauses": "None.",
+      "details": "Pure spring sound — implies the push-off, the effort of takeoff."
+    },
+    {
+      "filename": "jump-02.mp3",
+      "category": "JUMP",
+      "text": "¡Hyup!",
+      "tone": "Effort grunt, like the moment of pushing off the ground.",
+      "rhythm": "Fast and abrupt, with a breath intake at the start.",
+      "emphasis": "Whole word, abrupt and percussive.",
+      "pauses": "None.",
+      "details": "Sounds like effort — the small grunt before takeoff. Universal kid-jump sound."
+    },
+    {
+      "filename": "stop-01.mp3",
+      "category": "STOP",
+      "text": "¡Me detengo!",
+      "tone": "Obedient, gentle.",
+      "rhythm": "Medium, with a firm close.",
+      "emphasis": "\"detengo\" (the action).",
+      "pauses": "None.",
+      "details": "Natural and calm."
+    },
+    {
+      "filename": "stop-02.mp3",
+      "category": "STOP",
+      "text": "¡Pausa!",
+      "tone": "Short, like a pause button.",
+      "rhythm": "Fast.",
+      "emphasis": "The whole word.",
+      "pauses": "None.",
+      "details": "The shortest — for when the operator rushes the STOP and the kids hear it that way."
+    },
+    {
+      "filename": "greet-01.mp3",
+      "category": "GREET",
+      "text": "¡Hola! Soy ROBI.",
+      "tone": "Warm, personal introduction.",
+      "rhythm": "Medium, with a clear pause between the two phrases.",
+      "emphasis": "\"Hola\" (contact), \"ROBI\" (proper name).",
+      "pauses": "Long pause (~0.5s) between \"Hola\" and \"Soy ROBI\".",
+      "details": "The canonical introduction, the most used."
+    },
+    {
+      "filename": "greet-02.mp3",
+      "category": "GREET",
+      "text": "¡Hola! ¿Me extrañaron?",
+      "tone": "Playful, with complicity.",
+      "rhythm": "Medium, with rising inflection on \"¿Me extrañaron?\" (question).",
+      "emphasis": "\"extrañaron\" (the question).",
+      "pauses": "Long pause between \"Hola\" and the question.",
+      "details": "Generates conversation — kids usually answer \"yes\"."
+    },
+    {
+      "filename": "dance-01.mp3",
+      "category": "DANCE",
+      "text": "¡A bailar!",
+      "tone": "Musical, almost sung.",
+      "rhythm": "Medium with implicit rhythm (as if the word had a beat).",
+      "emphasis": "\"bailar\" (slightly stretched, sounds sung).",
+      "pauses": "None.",
+      "details": "The word \"bailar\" carries the rhythm — let TTS stretch it lightly."
+    },
+    {
+      "filename": "dance-02.mp3",
+      "category": "DANCE",
+      "text": "¡A mover el esqueleto!",
+      "tone": "Energetic, calling for movement.",
+      "rhythm": "Fast, almost like a slogan.",
+      "emphasis": "\"esqueleto\".",
+      "pauses": "None.",
+      "details": "The most exaggerated — good for the first time the kids try DANCE."
+    },
+    {
+      "filename": "celebrate-01.mp3",
+      "category": "CELEBRATE",
+      "text": "¡Lo logramos! Son excelentes programadores.",
+      "tone": "Triumphant, warm.",
+      "rhythm": "Medium, with pause between the two phrases.",
+      "emphasis": "\"Lo logramos\", \"excelentes\".",
+      "pauses": "Long pause (~0.4s) between \"Lo logramos\" and \"Son excelentes programadores\".",
+      "details": "Pride ALWAYS directed at the kids. \"Son\" (not \"Somos\") — the achievement is theirs."
+    },
+    {
+      "filename": "celebrate-02.mp3",
+      "category": "CELEBRATE",
+      "text": "¡Bravo, equipo! ¡Excelente trabajo!",
+      "tone": "Applauding, genuinely excited.",
+      "rhythm": "Medium-fast, with the energy of applause.",
+      "emphasis": "\"Bravo\", \"Excelente\".",
+      "pauses": "Pause between \"Bravo, equipo\" and \"Excelente trabajo\".",
+      "details": "If you could clap with your voice, this would be the sonic equivalent."
+    },
+    {
+      "filename": "joke-preamble-01.mp3",
+      "category": "TELL_JOKE_PREAMBLE",
+      "text": "¿Quieren escuchar un chiste?",
+      "tone": "Complicit, anticipating.",
+      "rhythm": "Medium, with rising inflection (question).",
+      "emphasis": "\"chiste\".",
+      "pauses": "None.",
+      "details": "Generates expectation — kids usually answer \"yes\"."
+    },
+    {
+      "filename": "joke-preamble-02.mp3",
+      "category": "TELL_JOKE_PREAMBLE",
+      "text": "¡Atentos, que viene uno bueno!",
+      "tone": "Announcement, like a show host.",
+      "rhythm": "Medium-fast, with prime-time energy.",
+      "emphasis": "\"bueno\".",
+      "pauses": "None.",
+      "details": "Promises quality — raises the expectation."
+    },
+    {
+      "filename": "riddle-preamble-01.mp3",
+      "category": "TELL_RIDDLE_PREAMBLE",
+      "text": "¿Les cuento una adivinanza?",
+      "tone": "Curious, inviting.",
+      "rhythm": "Medium, rising question.",
+      "emphasis": "\"adivinanza\".",
+      "pauses": "None.",
+      "details": "Soft, so as not to intimidate."
+    },
+    {
+      "filename": "riddle-preamble-02.mp3",
+      "category": "TELL_RIDDLE_PREAMBLE",
+      "text": "Prepara el cerebro... ¡viene una difícil!",
+      "tone": "Comic, like a game show host.",
+      "rhythm": "Slow at the start, accelerating on \"viene una difícil\".",
+      "emphasis": "\"difícil\".",
+      "pauses": "The pause after \"cerebro\" is the comic hook.",
+      "details": "Mysterious, setting up the riddle. Builds suspense."
+    },
+    {
+      "filename": "fact-preamble-01.mp3",
+      "category": "TELL_FACT_PREAMBLE",
+      "text": "¿Sabían que...?",
+      "tone": "Astonished, anticipating.",
+      "rhythm": "Slow, with suspense.",
+      "emphasis": "\"Sabían\".",
+      "pauses": "The \"...\" creates a pause — the kid waits for the fact.",
+      "details": "Mysterious, drawing attention. Sets up the surprise."
+    },
+    {
+      "filename": "fact-preamble-02.mp3",
+      "category": "TELL_FACT_PREAMBLE",
+      "text": "¡Esto les va a encantar!",
+      "tone": "Confident, anticipating the surprise.",
+      "rhythm": "Medium-fast.",
+      "emphasis": "\"encantar\".",
+      "pauses": "None.",
+      "details": "Emotional promise — the kid is about to hear something cool."
+    },
+    {
+      "filename": "goodbye-01.mp3",
+      "category": "SAY_GOODBYE",
+      "text": "¡Chau, equipo! Lo hicieron genial. ¡Hasta la próxima!",
+      "tone": "Affectionate, warm, with gratitude.",
+      "rhythm": "Medium, with pauses between the three phrases.",
+      "emphasis": "\"Chau\", \"genial\", \"próxima\".",
+      "pauses": "Pause between each of the three parts.",
+      "details": "Affectionate closing, leaves the door open."
+    },
+    {
+      "filename": "goodbye-02.mp3",
+      "category": "SAY_GOODBYE",
+      "text": "¡Adiós! Me voy a descansar un ratito.",
+      "tone": "Tender, with an implicit yawn.",
+      "rhythm": "Slow-medium, soft at the end.",
+      "emphasis": "\"descansar\".",
+      "pauses": "Pause between \"Adiós\" and \"Me voy a descansar\".",
+      "details": "Like when a tired adult tells a kid \"I'm going to take a nap\"."
+    },
+    {
+      "filename": "question-fallback-01.mp3",
+      "category": "ANSWER_QUESTION_FALLBACK",
+      "text": "Mmm, no se me ocurre qué decir. ¿Probamos otra pregunta?",
+      "tone": "Humble, gently confused.",
+      "rhythm": "Slow-medium, with the dubious \"Mmm\" at the start.",
+      "emphasis": "\"no se me ocurre\" (the honest confession).",
+      "pauses": "Pause after \"Mmm\".",
+      "details": "Honesty + invitation to keep going, never a dry \"I don't know\"."
+    },
+    {
+      "filename": "question-fallback-02.mp3",
+      "category": "ANSWER_QUESTION_FALLBACK",
+      "text": "Ay, no estoy seguro. ¿Me preguntas otra cosa?",
+      "tone": "Honest, asking for another chance.",
+      "rhythm": "Medium, with the soft \"Ay\" at the start.",
+      "emphasis": "\"seguro\" (the doubt).",
+      "pauses": "None.",
+      "details": "The initial \"Ay\" softens the \"I don't know\" — friendly failure, not catastrophe."
+    },
+    {
+      "filename": "unknown-01.mp3",
+      "category": "UNKNOWN",
+      "text": "No entendí esa instrucción. ¿Probamos otra?",
+      "tone": "Humble, inviting to try again.",
+      "rhythm": "Medium.",
+      "emphasis": "\"otra\".",
+      "pauses": "None.",
+      "details": "Never \"I didn't hear you\" (technical). Always \"¿probamos otra?\" (constructive)."
+    },
+    {
+      "filename": "unknown-02.mp3",
+      "category": "UNKNOWN",
+      "text": "Todavía no aprendí a hacer eso.",
+      "tone": "Honest, admitting the limit.",
+      "rhythm": "Medium, with soft emphasis on \"todavía\".",
+      "emphasis": "\"todavía\" (implies it's going to learn).",
+      "pauses": "None.",
+      "details": "The \"todavía\" leaves hope — ROBI is growing."
+    },
+    {
+      "filename": "bug-01.mp3",
+      "category": "BUG",
+      "text": "¡Oh, oh! Creo que encontramos un bug.",
+      "tone": "Comic surprise, not catastrophic.",
+      "rhythm": "Medium, with the \"¡Oh, oh!\" as a double exclamation.",
+      "emphasis": "\"bug\".",
+      "pauses": "None.",
+      "details": "The \"oh-oh\" cartoon tone — the failure is play."
+    },
+    {
+      "filename": "bug-02.mp3",
+      "category": "BUG",
+      "text": "Ay, algo se trabó. Pero lo arreglamos, ¿sí?",
+      "tone": "Confident, ensuring solution.",
+      "rhythm": "Medium, with the soft \"Ay\" at the start.",
+      "emphasis": "\"arreglamos\" (the promise of solution).",
+      "pauses": "The final \"¿sí?\" asks for cooperation — the operator can help.",
+      "details": "Failure becomes play. The kid trusts ROBI to fix it."
+    },
+    {
+      "filename": "paused-01.mp3",
+      "category": "PAUSED",
+      "text": "Estoy en pausa. Avísenme cuando seguir.",
+      "tone": "Calm, patient.",
+      "rhythm": "Slow-medium.",
+      "emphasis": "\"Avísenme\" (the instruction to the operator).",
+      "pauses": "None.",
+      "details": "The system stays passive, waiting for human input. Like ROBI napping."
+    },
+    {
+      "filename": "resumed-01.mp3",
+      "category": "RESUMED",
+      "text": "¡Listo para continuar!",
+      "tone": "Renewed, with energy.",
+      "rhythm": "Medium-fast.",
+      "emphasis": "\"Listo\", \"continuar\".",
+      "pauses": "None.",
+      "details": "Like waking up from a nap — ready for action."
+    },
+    {
+      "filename": "resumed-02.mp3",
+      "category": "RESUMED",
+      "text": "¡Sigo aquí! ¿Qué hacemos?",
+      "tone": "Warm, curious, picking up the thread.",
+      "rhythm": "Medium.",
+      "emphasis": "\"aquí\" (presence confirmed), \"hacemos\" (invitation).",
+      "pauses": "None.",
+      "details": "Opens conversation — useful if some time passed during pause."
+    },
+    {
+      "filename": "complete-01.mp3",
+      "category": "COMPLETE",
+      "text": "¡Listo!",
+      "tone": "Quick, conclusive.",
+      "rhythm": "Fast.",
+      "emphasis": "The whole word.",
+      "pauses": "None.",
+      "details": "The shortest — for when there's not much to say."
+    },
+    {
+      "filename": "complete-02.mp3",
+      "category": "COMPLETE",
+      "text": "¡Hecho!",
+      "tone": "Confident, satisfactory.",
+      "rhythm": "Fast.",
+      "emphasis": "\"Hecho\".",
+      "pauses": "None.",
+      "details": "The most \"operative\" — task closure."
+    },
+    {
+      "filename": "question-preamble-01.mp3",
+      "category": "ANSWER_QUESTION_PREAMBLE",
+      "text": "¡Hmm, interesante! Déjame pensarlo un momentito.",
+      "tone": "Curious, friendly, like ROBI is actually thinking about the question.",
+      "rhythm": "Medium, with a small pondering pause after 'interesante'.",
+      "emphasis": "\"interesante\" (the hook), \"momentito\" (the time-bridge promise).",
+      "pauses": "Tiny pause (~0.2s) after \"interesante\".",
+      "details": "Plays immediately when the kid asks a question, WHILE the LLM is being called and the answer audio is being synthesised. Fills the silence gap so ROBI doesn't sit quiet. Generic — works for any kid question."
+    },
+    {
+      "filename": "question-preamble-02.mp3",
+      "category": "ANSWER_QUESTION_PREAMBLE",
+      "text": "¡Buena pregunta! Dame un segundo, ¿sí?",
+      "tone": "Warm, with playful agreement, like ROBI likes the question.",
+      "rhythm": "Medium-fast, with the closing \"¿sí?\" asking for cooperation.",
+      "emphasis": "\"Buena\" (genuine praise), \"segundo\" (the brief time-bridge).",
+      "pauses": "Small pause between \"pregunta\" and \"Dame\".",
+      "details": "Same role as question-preamble-01: fills the silence while the LLM responds. The praise (\"Buena pregunta!\") makes the kid feel heard even before the answer arrives."
+    },
+    {
+      "_comment_content": "The 17 phrases below live in src/lib/robi/responses.ts (the JOKES, RIDDLES, FACTS arrays). They share a category-level TTS instruction shape so the same cadence/prosody plays across all jokes/riddles/facts while the TEXT itself varies.",
+      "filename": "joke-01.mp3",
+      "category": "JOKE",
+      "text": "¿Por qué los programadores prefieren el frío? Porque odian el calor de la CPU. 🥶",
+      "tone": "Playful, with a clear setup → punchline arc.",
+      "rhythm": "Medium, with a tiny beat between the question and the answer.",
+      "emphasis": "\"frío\" (setup) and \"CPU\" (punchline punch word).",
+      "pauses": "Small beat (~0.3s) between the question mark and the answer.",
+      "details": "Tech humor. Set the question like a riddle, then deliver the punchline with a wink."
+    },
+    {
+      "filename": "joke-02.mp3",
+      "category": "JOKE",
+      "text": "Un pixel entra a un bar y el barman le dice: Acá no servimos tu tipo.",
+      "tone": "Playful, with a visual, slow setup.",
+      "rhythm": "Medium-slow, almost like telling a short story.",
+      "emphasis": "\"pixel\" and \"tu tipo\" (the double meaning punchline).",
+      "pauses": "Beat before the punchline, right after the colon.",
+      "details": "Pixel joke — the punchline is the bar pun. Let the second half land."
+    },
+    {
+      "filename": "joke-03.mp3",
+      "category": "JOKE",
+      "text": "¿Qué le dijo el cero al ocho? Bonito cinturón.",
+      "tone": "Playful, with a short setup.",
+      "rhythm": "Medium, with a beat between question and answer.",
+      "emphasis": "\"cero\", \"ocho\", \"cinturón\" (the punchline).",
+      "pauses": "Beat between the question and the answer.",
+      "details": "Visual joke (zero + eight = belt). Let the punchline land as a visual."
+    },
+    {
+      "filename": "joke-04.mp3",
+      "category": "JOKE",
+      "text": "¿Cómo se despide un programador? printf('¡Chau!');",
+      "tone": "Playful, with a tech-code punchline.",
+      "rhythm": "Medium, with a beat between question and answer.",
+      "emphasis": "\"programador\" and \"printf\" (the punchline).",
+      "pauses": "Beat between question and answer.",
+      "details": "Programming joke — the punchline is a print statement. Deliver the closing parenthesis lightly."
+    },
+    {
+      "filename": "joke-05.mp3",
+      "category": "JOKE",
+      "text": "¿Por qué los programadores confunden Halloween con Navidad? Porque OCT 31 es igual a DEC 25.",
+      "tone": "Playful, longer setup, with a geek punchline.",
+      "rhythm": "Medium, with a clear beat between question and answer.",
+      "emphasis": "\"OCT 31\" and \"DEC 25\" (the punchline, said as dates).",
+      "pauses": "Beat between question and answer.",
+      "details": "Math/programming joke — let the punchline land as if explaining a coincidence."
+    },
+    {
+      "filename": "joke-06.mp3",
+      "category": "JOKE",
+      "text": "¿Qué hace una variable cuando se enamora? Se vuelve constante. 💕",
+      "tone": "Playful, slightly romantic, with a tech pun.",
+      "rhythm": "Medium, with a beat between question and answer.",
+      "emphasis": "\"variable\" and \"constante\" (the punchline).",
+      "pauses": "Beat between question and answer.",
+      "details": "Programming love joke — let the punchline land sweetly."
+    },
+    {
+      "filename": "joke-07.mp3",
+      "category": "JOKE",
+      "text": "¿Por qué el programador se sentó frente a la pantalla? Para ver el código bien de cerca.",
+      "tone": "Playful, slightly absurd, with a simple punchline.",
+      "rhythm": "Medium, with a beat between question and answer.",
+      "emphasis": "\"sentó frente a la pantalla\" and \"bien de cerca\" (the punchline).",
+      "pauses": "Beat between question and answer.",
+      "details": "Silly programmer joke — the punchline is the absurdity. Smile at the end."
+    },
+    {
+      "filename": "riddle-01.mp3",
+      "category": "RIDDLE",
+      "text": "Oro parece, plata no es. ¿Qué es? ¡Un plátano! 🍌",
+      "tone": "Mysterious, then a playful reveal.",
+      "rhythm": "Medium, with a beat between riddle and answer.",
+      "emphasis": "\"Oro parece, plata no es\" and \"plátano\" (the reveal).",
+      "pauses": "Beat between the riddle and the answer; longer on the answer.",
+      "details": "Classic Spanish riddle. The answer is unexpected — let the reveal land with a smile."
+    },
+    {
+      "filename": "riddle-02.mp3",
+      "category": "RIDDLE",
+      "text": "Tiene dientes y no come. Tiene cabeza y no es hombre. ¿Qué es? ¡El ajo! 🧄",
+      "tone": "Mysterious, with clues building up.",
+      "rhythm": "Medium, with a beat between riddle and answer.",
+      "emphasis": "\"dientes\", \"cabeza\", \"ajo\" (the reveal).",
+      "pauses": "Beat between riddle and answer.",
+      "details": "Build the clues slowly. The garlic answer is the surprise — smile when delivering."
+    },
+    {
+      "filename": "riddle-03.mp3",
+      "category": "RIDDLE",
+      "text": "Vuela sin alas, silba sin boca y no se toca. ¿Qué es? ¡El viento! 💨",
+      "tone": "Mysterious, almost poetic.",
+      "rhythm": "Medium, with a beat between riddle and answer.",
+      "emphasis": "\"vuela sin alas\", \"silba sin boca\", \"viento\" (the reveal).",
+      "pauses": "Beat between riddle and answer.",
+      "details": "Poetic riddle. The wind answer is calming — let the reveal feel like an exhale."
+    },
+    {
+      "filename": "riddle-04.mp3",
+      "category": "RIDDLE",
+      "text": "Cuanto más grande, menos se ve. ¿Qué es? ¡La oscuridad! 🌑",
+      "tone": "Mysterious, with a paradox.",
+      "rhythm": "Medium, with a beat between riddle and answer.",
+      "emphasis": "\"más grande, menos se ve\" and \"oscuridad\" (the reveal).",
+      "pauses": "Beat between riddle and answer.",
+      "details": "Paradox riddle. The answer is poetic — let it land with wonder."
+    },
+    {
+      "filename": "riddle-05.mp3",
+      "category": "RIDDLE",
+      "text": "Blanca por dentro, verde por fuera. ¿Qué es? ¡Una pera! 🍐",
+      "tone": "Mysterious, then a friendly reveal.",
+      "rhythm": "Medium, with a beat between riddle and answer.",
+      "emphasis": "\"Blanca por dentro\", \"verde por fuera\", \"pera\" (the reveal).",
+      "pauses": "Beat between riddle and answer.",
+      "details": "Friendly riddle. The pear answer is the surprise — let the reveal feel like a wink."
+    },
+    {
+      "filename": "fact-01.mp3",
+      "category": "FACT",
+      "text": "¿Sabías que el primer bug de la historia fue una polilla real que se metió en una computadora en 1947? ¡De ahí viene la palabra 'bug' en programación! 🦋",
+      "tone": "Didactic, enthusiastic, like a kid-friendly science show.",
+      "rhythm": "Medium, with a beat between the question and the answer.",
+      "emphasis": "\"polilla\", \"1947\", \"bug\" (the punch word).",
+      "pauses": "Beat between question and answer.",
+      "details": "Tech history fact. The moth visual is the hook — let \"bug\" land as the payoff."
+    },
+    {
+      "filename": "fact-02.mp3",
+      "category": "FACT",
+      "text": "La primera programadora del mundo fue Ada Lovelace, en 1843. ¡Hace más de 180 años! 👩‍💻",
+      "tone": "Didactic, enthusiastic, with a wow-factor.",
+      "rhythm": "Medium, with emphasis on the timeline.",
+      "emphasis": "\"Ada Lovelace\", \"1843\", \"más de 180 años\".",
+      "pauses": "None.",
+      "details": "Role-model fact. The time gap (\"más de 180 años\") is the wow moment — emphasize it."
+    },
+    {
+      "filename": "fact-03.mp3",
+      "category": "FACT",
+      "text": "El lenguaje de programación más usado del mundo se llama JavaScript. Está en casi todas las páginas web. 💻",
+      "tone": "Didactic, with quiet authority.",
+      "rhythm": "Medium, measured.",
+      "emphasis": "\"JavaScript\", \"páginas web\".",
+      "pauses": "None.",
+      "details": "Everyday relevance — JavaScript is on the screen they're looking at."
+    },
+    {
+      "filename": "fact-04.mp3",
+      "category": "FACT",
+      "text": "Internet pesa: si cada email fuera un grano de arena, llenarían varias playas. 🏖️",
+      "tone": "Astonished, with a poetic image.",
+      "rhythm": "Medium, with a build to the visual.",
+      "emphasis": "\"Internet pesa\", \"varias playas\" (the visual punch).",
+      "pauses": "None.",
+      "details": "Scale-of-the-internet fact. The beach image is the hook — let it paint a picture."
+    },
+    {
+      "filename": "fact-05.mp3",
+      "category": "FACT",
+      "text": "El emoji más usado del mundo es la carita que se ríe. 😂",
+      "tone": "Playful, with a fun reveal.",
+      "rhythm": "Medium, with emphasis on the punchline.",
+      "emphasis": "\"emoji más usado\", \"carita que se ríe\".",
+      "pauses": "None.",
+      "details": "Self-referential — the kid is probably using that emoji right now. Smile with the reveal."
+    }
+  ]
+}

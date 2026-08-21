@@ -1,0 +1,841 @@
+/* Control view (/control) — phone UI for the presenter.
+   Imported by src/pages/control.astro.
+   All `.controller` / `.conn-*` / `.control-hero` / `.badge*` / `.wake-btn`
+   / `.mic*` / `.cmd-*` / `.sg-*` / `.dpad*` / `.pill` / `.actions-pill`
+   / `.ripple` / `.activity-card` / `.toaster` / `.toast*` rules belong
+   to this view.
+
+   Naming note: this view uses `.control-hero` instead of `.hero` to
+   avoid colliding with the home page's `.hero` from global.css. */
+
+/* ===== Tokens — iOS-leaning palette =====
+   Scoped to `--r-*` to avoid colliding with the global palette in
+   global.css (--accent, --bad, --fg, --fg-dim). The control view is
+   intentionally darker / more saturated than the rest of the app. */
+:root {
+  --r-bg-1: #0a1429;
+  --r-bg-2: #0e1a36;
+  --r-bg-3: #14223f;
+  --r-glass: rgba(20, 30, 56, 0.45);
+  --r-glass-strong: rgba(20, 30, 56, 0.65);
+  --r-glass-soft: rgba(8, 14, 30, 0.55);
+  --r-border: rgba(255, 255, 255, 0.08);
+  --r-border-strong: rgba(255, 255, 255, 0.16);
+  --r-fg: #ffffff;
+  --r-fg-dim: rgba(255, 255, 255, 0.62);
+  --r-fg-mute: rgba(255, 255, 255, 0.40);
+  --r-accent: #00d4ff;        /* iOS-style cyan */
+  --r-accent-glow: rgba(0, 212, 255, 0.45);
+  --r-bad: #ff453a;
+  --r-radius-card: 26px;
+  --r-radius-pill: 999px;
+  --r-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --r-ease: cubic-bezier(0.21, 1.02, 0.73, 1);
+}
+
+/* ===== Background — iOS dark wallpaper feel ===== */
+body {
+  background:
+    radial-gradient(60% 50% at 100% -10%, rgba(0, 212, 255, 0.18), transparent 60%),
+    radial-gradient(70% 60% at 0% 100%, rgba(28, 60, 120, 0.35), transparent 70%),
+    linear-gradient(180deg, var(--r-bg-1), var(--r-bg-2) 60%, var(--r-bg-3));
+  background-attachment: fixed;
+  color: var(--r-fg);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Soft beam from top-right like iOS lock-screen light */
+body::before {
+  content: "";
+  position: fixed;
+  top: -200px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.18), transparent 60%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ===== Layout ===== */
+.controller {
+  max-width: 540px;
+  /* Cap at 80vh so the iOS-style background stays visible at the bottom
+     (20vh breathing room). Body has overflow:hidden globally, so the
+     overflow-y:auto here is what makes tall content reachable — the
+     controller scrolls internally instead of clipping. */
+  max-height: 100%;
+  margin: 0 auto;
+  padding: 22px 18px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ===== Header — flat, big bold ===== */
+.hdr {
+  padding: 4px 4px 0;
+}
+
+/* Brand logo — replaces the text brand-title. Sourced from
+   /public/logo.webp (242×128, "ROBI — El amigo del aula"). */
+.brand-logo {
+  display: block;
+  width: 168px;
+  height: auto;
+  margin: 4px 0 6px;
+  filter: drop-shadow(0 4px 16px rgba(0, 212, 255, 0.18));
+}
+
+/* ===== Connection row — small icon with notification badge ===== */
+.conn-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 0;
+  color: var(--r-bad);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.conn-row[data-connected="true"] { color: #34d399; }
+
+.conn-icon-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--r-border);
+  color: inherit;
+}
+
+.conn-icon-wrap svg { display: block; }
+
+.conn-dot {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--r-bad);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid var(--r-bg-1);
+}
+
+.conn-text {
+  letter-spacing: -0.01em;
+}
+
+/* ===== Section titles — big bold white ===== */
+.section-title {
+  margin: 0;
+  padding: 4px 4px 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--r-fg);
+}
+
+/* ===== Card primitive — iOS glass ===== */
+.card {
+  background: var(--r-glass);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid var(--r-border);
+  border-radius: var(--r-radius-card);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 24px 48px rgba(0, 0, 0, 0.30);
+}
+
+/* ===== Hero card — centered face + state + CTA ===== */
+.control-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 24px 24px;
+  text-align: center;
+}
+
+/* Badge — sprite-based face (control-sprites.webp). Background-image,
+   background-size, and background-position are set inline in the
+   component (they depend on the per-state cell + the runtime size
+   prop). The CSS here only owns the cosmetic overlay. */
+.badge-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.badge {
+  filter: drop-shadow(0 12px 32px var(--r-accent-glow));
+}
+
+.badge-celebrating { animation: badge-celebrate 0.6s ease-in-out infinite; }
+
+@keyframes badge-celebrate {
+  0%, 100% { transform: translateY(0)    rotate(0); }
+  25%      { transform: translateY(-4px) rotate(-5deg); }
+  75%      { transform: translateY(-4px) rotate(5deg); }
+}
+
+.badge-paused-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  grid-template-columns: 8px 8px;
+  gap: 8px;
+  background: rgba(10, 20, 41, 0.5);
+  border-radius: 50%;
+}
+
+.badge-paused-overlay .bar {
+  width: 8px;
+  height: 32px;
+  background: var(--r-bad);
+  border-radius: 2px;
+}
+
+.hero-state {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 2px;
+}
+
+/* ===== Wake button — solid cyan ===== */
+.wake-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 26px;
+  border-radius: var(--r-radius-pill);
+  border: none;
+  background: var(--r-accent);
+  color: #00131e;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow:
+    0 12px 28px rgba(0, 212, 255, 0.40),
+    0 1px 0  rgba(255, 255, 255, 0.30) inset;
+  transition:
+    transform 200ms var(--r-spring),
+    box-shadow 240ms,
+    filter 200ms;
+}
+
+.wake-btn:hover {
+  filter: brightness(1.05);
+  box-shadow:
+    0 14px 32px rgba(0, 212, 255, 0.50),
+    0 1px 0  rgba(255, 255, 255, 0.35) inset;
+}
+
+.wake-btn:active { transform: scale(0.97); }
+.wake-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.hero-hint {
+  margin: 0;
+  color: var(--r-fg-dim);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+/* ===== Mic — kept smaller, hero-level ===== */
+.mic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+}
+
+.mic-btn {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 212, 255, 0.40);
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--r-accent);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 220ms var(--r-spring),
+    background 280ms,
+    color 220ms;
+}
+
+.mic-btn .ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid var(--r-accent);
+  opacity: 0.4;
+}
+
+.mic-btn .ic-wrap {
+  display: grid;
+  place-items: center;
+  transition: transform 220ms var(--r-spring);
+}
+
+.mic-btn .sent-check {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  color: #34d399;
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.mic-btn .lb {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--r-fg-dim);
+}
+
+.mic-btn.live {
+  background: var(--r-bad);
+  border-color: var(--r-bad);
+  color: white;
+  animation: mic-glow 1.2s ease-in-out infinite;
+}
+
+.mic-btn.live .ring {
+  border-color: var(--r-bad);
+  animation: mic-ring 1.2s ease-out infinite;
+}
+
+.mic-btn.busy {
+  background: rgba(255, 184, 107, 0.25);
+  border-color: rgba(255, 184, 107, 0.55);
+  color: #ffb86b;
+}
+
+.mic-btn.sent .ic-wrap    { animation: sent-flash 600ms ease-out; }
+.mic-btn.sent .sent-check { animation: sent-check 600ms ease-out; }
+.mic-btn.sent             { border-color: #34d399; color: #34d399; }
+
+.mic-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@keyframes mic-glow {
+  0%, 100% { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35), 0 0 0 0  rgba(255, 69, 58, 0.45); }
+  50%      { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35), 0 0 0 14px rgba(255, 69, 58, 0); }
+}
+
+@keyframes mic-ring {
+  0%   { transform: scale(1);    opacity: 0.7; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@keyframes sent-flash {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+
+@keyframes sent-check {
+  0%   { opacity: 0; transform: scale(0.6); }
+  40%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+.mic-error {
+  color: var(--r-bad);
+  font-size: 13px;
+  margin: 4px 0 0;
+  text-align: center;
+}
+
+/* ===== Command stack — group title + panels ===== */
+.cmd-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ===== Pasos + D-pad row ===== */
+.mov-row {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 10px;
+}
+
+.pasos-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 14px;
+  justify-content: center;
+}
+
+.pasos-label {
+  color: var(--r-fg-dim);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* SegmentGroup — inline (no container chrome) */
+.sg-root {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  gap: 4px;
+  isolation: isolate;
+}
+
+.sg-root[data-disabled] { opacity: 0.45; }
+
+.sg-indicator {
+  position: absolute;
+  z-index: 0;
+  background: transparent;
+  box-shadow: none;
+  width: var(--width);
+  height: var(--height);
+  top: var(--top);
+  left: var(--left);
+  transition:
+    width  280ms var(--r-ease),
+    height 280ms var(--r-ease),
+    left   280ms var(--r-ease),
+    top    280ms var(--r-ease);
+}
+
+.sg-item {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+/* ItemControl is the actual clickable button inside each segment.
+   It owns the size, color and hit target — the outer Item is just a
+   positioning wrapper. Without this element the picker has no click
+   surface and only the default value renders as "selected". */
+.sg-item-control {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 36px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--r-fg-mute);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 200ms;
+  user-select: none;
+}
+
+.sg-item-control[data-state="checked"] { color: var(--r-fg); }
+
+.sg-item-control[data-focus-visible] {
+  outline: 2px solid var(--r-accent);
+  outline-offset: 2px;
+}
+
+.sg-item-control[data-disabled] { cursor: not-allowed; }
+
+/* D-pad — pills in + cross pattern */
+.dpad-panel {
+  padding: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.dpad {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 8px;
+  width: 100%;
+}
+
+.dpad > .dpad-center { /* empty center cell */ }
+
+.dpad-up    { grid-area: 1 / 1 / 1 / span 3;       justify-self: stretch; }
+.dpad-left  { grid-area: 2 / 1 / span 1 / span 1;   justify-self: stretch; }
+.dpad-right { grid-area: 2 / 2 / span 1 / span 2;   justify-self: stretch; }
+.dpad-down  { grid-area: 3 / 1 / span 1 / span 3;   justify-self: stretch; }
+
+/* Pill base — used by dpad, actions, emergency */
+.pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: var(--r-radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--r-fg);
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    background 180ms,
+    border-color 180ms,
+    transform 140ms var(--r-spring);
+}
+
+.pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.pill:active { transform: scale(0.96); }
+
+.pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.pill .ic-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: var(--r-fg);
+  opacity: 0.85;
+}
+
+.pill .lb { color: var(--r-fg); }
+
+/* Icon-only pills — used by the dpad. No text label, larger hit
+   target (60px square), accent-tinted so the kid sees it's tappable.
+   The accent matches the cyan brand color and reads well against the
+   dark glass card behind it. */
+.pill.icon-only {
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  background: rgba(110, 231, 255, 0.10);
+  border-color: rgba(110, 231, 255, 0.25);
+}
+
+.pill.icon-only:hover {
+  background: rgba(110, 231, 255, 0.18);
+  border-color: rgba(110, 231, 255, 0.45);
+}
+
+.pill.icon-only .ic-wrap {
+  width: 26px;
+  height: 26px;
+  opacity: 1;
+  color: var(--r-fg);
+}
+
+/* Sent flash shared across all pills */
+.pill[data-sent]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 212, 255, 0.25);
+  animation: pill-flash 600ms ease-out forwards;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.pill[data-sent] { animation: pill-sent 600ms ease-out; }
+
+@keyframes pill-flash {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes pill-sent {
+  0%   { transform: scale(0.96); }
+  40%  { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.pill .sent-check {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  color: var(--r-fg);
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+}
+
+.pill[data-sent] .sent-check {
+  animation: pill-sent-check 600ms ease-out;
+}
+
+@keyframes pill-sent-check {
+  0%   { opacity: 0; transform: scale(0.6); }
+  35%  { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+
+/* ===== Actions row — single pill containing all 3 ===== */
+.actions-pill {
+  display: flex;
+  align-items: stretch;
+  padding: 5px;
+  gap: 0;
+  border-radius: var(--r-radius-pill);
+}
+
+.actions-pill .pill {
+  flex: 1;
+  height: 48px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-radius-pill);
+  font-size: 15px;
+  font-weight: 500;
+  gap: 8px;
+}
+
+.actions-pill .pill:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.actions-pill .pill + .pill {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.actions-pill .pill:not(:first-child):not(:last-child) {
+  border-radius: 0;
+}
+
+.actions-pill .pill:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.actions-pill .pill .ic-wrap { width: 20px; height: 20px; opacity: 0.95; }
+
+/* ===== Ripple ===== */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.40) 0%, transparent 70%);
+  pointer-events: none;
+  transform: scale(0);
+  animation: ripple-out 600ms var(--r-ease) forwards;
+  z-index: 10;
+}
+
+@keyframes ripple-out {
+  to { transform: scale(1); opacity: 0; }
+}
+
+/* ===== Activity card ===== */
+.activity-card {
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.activity-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.activity-card li {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(8, 14, 30, 0.55);
+  border: 1px solid var(--r-border);
+  border-radius: 14px;
+  font-size: 14px;
+  animation: act-in 280ms var(--r-ease);
+}
+
+@keyframes act-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.activity-card .src {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.activity-card li.voice  .src { color: var(--r-accent); background: rgba(0, 212, 255, 0.12); }
+.activity-card li.manual .src { color: #34d399;        background: rgba(52, 211, 153, 0.12); }
+
+.activity-card .t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--r-fg);
+}
+
+.activity-card .c {
+  color: var(--r-fg-dim);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: var(--r-radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.activity-card .empty {
+  color: var(--r-fg-mute);
+  font-size: 15px;
+  margin: 8px 0 0;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Emergency buttons inline — uses .pill base */
+.emergency-inline {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.emergency-inline .pill.ebtn.stop {
+  background: var(--r-bad);
+  color: white;
+  border-color: transparent;
+}
+
+.emergency-inline .pill.ebtn.resume {
+  background: #34d399;
+  color: #00131e;
+  border-color: transparent;
+}
+
+.emergency-inline .pill.ebtn.reset {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--r-fg);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+.emergency-inline .pill.ebtn:hover { filter: brightness(1.1); }
+
+.emergency-inline .pill.ebtn .ic-wrap { opacity: 0.95; }
+
+/* ===== Ark UI Toast ===== */
+.toaster {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.toast {
+  pointer-events: auto;
+  min-width: min(320px, 92vw);
+  max-width: 92vw;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: rgba(20, 30, 56, 0.92);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid var(--r-border-strong);
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  color: var(--r-fg);
+  font-size: 14px;
+  line-height: 1.35;
+  transform-origin: bottom center;
+  transition:
+    opacity   280ms var(--r-ease),
+    transform 320ms var(--r-spring);
+}
+
+.toast[data-state="open"]   { opacity: 1; transform: translateY(0)    scale(1); }
+.toast[data-state="closed"] { opacity: 0; transform: translateY(14px) scale(0.96); }
+
+.toast-title { font-weight: 600; margin: 0; }
+.toast-desc  { color: var(--r-fg-dim); font-size: 12.5px; margin: 2px 0 0; }
+
+.toast-error {
+  border-color: rgba(255, 69, 58, 0.45);
+  background: rgba(60, 20, 25, 0.92);
+}
+
+/* ===== Small screens ===== */
+@media (max-width: 380px) {
+  .brand-logo         { width: 140px; }
+  .section-title      { font-size: 28px; }
+  .control-hero       { padding: 22px 18px 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

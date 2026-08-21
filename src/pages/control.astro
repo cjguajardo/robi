@@ -1,0 +1,9 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { Controller } from "../components/control/Controller";
+import "../styles/control.css";
+---
+
+<BaseLayout title="ROBI · Control">
+  <Controller client:only="react" />
+</BaseLayout>

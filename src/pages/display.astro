@@ -1,0 +1,9 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { Robi } from "../components/display/Robi";
+import "../styles/display.css";
+---
+
+<BaseLayout title="ROBI — Display" bare={true}>
+    <Robi client:only="react" />
+</BaseLayout>

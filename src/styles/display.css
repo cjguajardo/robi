@@ -1,0 +1,267 @@
+/* Display view (/display) — ROBI's projected scene.
+   Imported by src/pages/display.astro.
+   All `.robi-*` / `.avatar-*` / `.conn` / `.speech` / `.status` rules
+   belong to this view. */
+
+/* Scene = full viewport (100vw × 100dvh with 100vh fallback), ROBI
+   horizontally centered at 80% from top (20vh breathing room below). */
+.robi-scene {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, #1b2655 0%, #0b1020 70%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 20vh;
+  padding-bottom: 20dvh;
+}
+
+.robi-scene[data-paused="true"] {
+  filter: grayscale(0.6) brightness(0.7);
+}
+
+/* Parallax layers — three absolutely-positioned bands, NOT full viewport.
+   Each one occupies the visual region where it belongs (classic
+   platformer composition: sky on top, scene in the middle, floor at
+   the bottom). All three share `pointer-events: none` so they never
+   block clicks on the avatar or speech bubble. Z-index keeps them
+   stacked under the avatar.
+
+   Bands (1080px reference viewport, scaled with vh for projector size):
+     .robi-sky      → top 0–42vh     (space backdrop, top-anchored)
+     .robi-scene-bg → 38vh–75vh      (mid-ground, slight overlap with sky)
+     .robi-floor    → bottom 75–100vh (ground tile under ROBI's feet)
+   The scene band overlaps sky/floor by a few vh so the boundaries
+   feather naturally instead of showing hard seams. */
+.robi-sky,
+.robi-scene-bg,
+.robi-floor {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Sky — top band only. background-size: cover so the planet and stars
+   fill the band without distortion (slight crop on the sides on
+   ultra-wide screens, acceptable for a backdrop). No tiling (sky is
+   one continuous image). Scrolls horizontally at 0.2× world speed. */
+.robi-sky {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 42vh;
+  background-image: url(/sky.webp);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: top center;
+  z-index: var(--z-far);
+  will-change: background-position;
+}
+
+/* Scene — middle band. background-size: auto 100% keeps the source
+   aspect (the image is wide) while filling the band vertically; tiles
+   horizontally to wrap seamlessly as ROBI walks east/west. Scrolls
+   at 0.5× world speed. mix-blend-mode screen lights up the mid-ground
+   against the dark sky band behind it. */
+.robi-scene-bg {
+  top: 38vh;
+  left: 0;
+  right: 0;
+  height: 37vh;
+  background-image: url(/scene.webp);
+  background-size: auto 100%;
+  background-repeat: repeat-x;
+  background-position: bottom center;
+  mix-blend-mode: screen;
+  z-index: var(--z-mid);
+  will-change: background-position;
+}
+
+/* Floor — bottom band where ROBI stands. 64×64 tile aligned 1:1 with
+   world blocks. background-size is fixed (not viewport-relative) so
+   the tile stays 1:1 with BLOCK_PX regardless of screen resolution.
+   Scrolls at 1× world speed. */
+.robi-floor {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 27vh;
+  background-image: url(/floor.webp);
+  background-size: 160px 270px;
+  background-repeat: repeat;
+  z-index: var(--z-near);
+  will-change: background-position;
+}
+
+/* Avatar scaler — height comes from --sprite-height (360 desktop /
+   128 mobile, set in global.css). Cell aspect ratio is 2:3 so width
+   auto-derives via aspect-ratio. The z-index keeps ROBI above the
+   parallax layers; without it, the layers' explicit positive z-index
+   (var(--z-far/mid/near)) would paint OVER the avatar (CSS step 7
+   comes after step 6 where position:relative with z-index:auto lives). */
+.avatar-scaler {
+  position: relative;
+  z-index: var(--z-robi);
+  aspect-ratio: 2 / 3;
+  height: var(--sprite-height);
+  display: grid;
+  place-items: center;
+}
+
+.avatar-wrap {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+}
+
+.avatar-sprite {
+  display: block;
+  filter: drop-shadow(0 12px 32px rgba(110, 231, 255, 0.18));
+  /* Sprite cell is rendered at 240×360 by the generated stylesheet.
+     Scale it down to match --sprite-height. Desktop: scale(1), mobile:
+     scale(~0.356). Cell coordinates in background-position are
+     unaffected because we scale the rendered element, not the sheet.
+
+     The sprite sheet has the character biased ~7% to the LEFT within
+     each cell (visible pink padding is wider on the right). Translate
+     the visible sprite to the right so the character sits at the
+     horizontal center of the .avatar-scaler. The translateX sits
+     BEFORE scale so it stays in screen pixels and is computed as a
+     fraction of --sprite-height so the proportional offset matches
+     on desktop (360) and mobile (128). */
+  transform: translateX(calc(var(--sprite-height) * 0.05))
+             scale(calc(var(--sprite-height) / 360px));
+  transform-origin: center;
+}
+
+/* Connection pill */
+.conn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: var(--z-chrome);
+  font-size: 12px;
+  color: var(--fg-dim);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+/* Brand mark — top-center, small enough not to compete with the
+   speech bubble (which sits at 10% from top) or the avatar at the
+   bottom. Pure decoration; the aria-hidden + empty alt means it
+   doesn't show up in screen readers (ROBI's name is the page title). */
+.display-logo {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: var(--z-chrome);
+  transform: translateX(-50%);
+  width: 96px;
+  height: auto;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+@media (max-width: 380px) {
+  /* On very small viewports the logo would crowd the speech bubble.
+     Hide it — the speech bubble carries the brand context anyway. */
+  .display-logo { display: none; }
+}
+
+/* Speech bubble — top banner so it doesn't obstruct ROBI */
+.speech {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  z-index: var(--z-overlay);
+  transform: translateX(-50%);
+  background: rgba(246, 247, 251, 0.95);
+  color: #0b1020;
+  padding: 16px 28px;
+  border-radius: 24px;
+  font-size: clamp(20px, 3.5vw, 36px);
+  font-weight: 600;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  animation: speech-in 320ms ease-out;
+  max-width: 80%;
+  text-align: center;
+}
+
+@keyframes speech-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Status dev pill */
+.status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: var(--z-overlay);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--fg-dim);
+}
+
+.status .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.status .dot[data-state="LISTENING"]   { background: var(--ok); }
+.status .dot[data-state="SPEAKING"]    { background: var(--accent); }
+.status .dot[data-state="EXECUTING"]   { background: var(--warn); }
+.status .dot[data-state="CONFUSED"]    { background: var(--bad); }
+.status .dot[data-state="CELEBRATING"] { background: var(--ok); }
+.status .dot[data-state="SLEEPING"]    { background: #4a557a; }
+.status .dot[data-state="PAUSED"]      { background: var(--bad); }
+
+/* Paused — freeze the avatar so the sprite cycle stops. The scene
+   filter above already dims the stage; animation-play-state pauses
+   the cycle without snapping the avatar to a wrong frame. */
+.avatar-scaler[data-state="paused"] .avatar-sprite {
+  animation-play-state: paused !important;
+}
+
+/* JUMP translation animation — runs in lockstep with the sprite frame
+   cycle (also 6 segments). Triggered by adding the `.jumping` class
+   while a JUMP command is in flight (see Robi.tsx → RobiAvatar).
+   Segment-by-segment timeline:
+     segment 1 (0 → 16.67%): on the ground       → sprite 0 (crouch)
+     segment 2 (16 → 33%   ): pushing off       → sprite 1 (push-off)
+     segment 3 (33 → 50%   ): rising mid-air    → sprite 1 (held)
+     segment 4 (50 → 67%   ): apex (held)       → sprite 2 (apex)
+     segment 5 (67 → 83%   ): falling          → sprite 2 (held)
+     segment 6 (83 → 100%  ): landed            → sprite 0 (landed)
+   Cubic-bezier ease-out gives a quick launch and gravity-feel descent. */
+@keyframes avatar-jump {
+  0%      { transform: translateY(0); }
+  16.67%  { transform: translateY(-25px); }
+  33.33%  { transform: translateY(-55px); }
+  50%     { transform: translateY(-65px); }    /* apex */
+  66.67%  { transform: translateY(-55px); }
+  83.33%  { transform: translateY(-15px); }
+  100%    { transform: translateY(0); }       /* landed */
+}
+.avatar-scaler.jumping .avatar-wrap {
+  animation: avatar-jump 700ms cubic-bezier(0.33, 0.0, 0.33, 1.0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-sprite { animation: none !important; }
+  .avatar-scaler.jumping .avatar-wrap { animation: none !important; }
+}
