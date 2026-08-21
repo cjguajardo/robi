@@ -6,6 +6,37 @@ Celebración. El niño dice "lo hicimos!" / "ROBI celebra"; el operador usa el b
 
 Único comando cuyo reducer lleva a un estado dedicado `CELEBRATING` (no `EXECUTING`). 1.5s de celebración visible post-audio.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "lo hicimos!"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → CELEBRATING (no EXECUTING)"]
+        BR["SAY audioUrl celebrate-NN.mp3"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> COMP
+    end
+
+    SVR -->|SAY| DISP
+
+    subgraph DISP["📺 Display"]
+        PLAY[playSay]
+        C["celebrating sprite 1.5s visible"]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        PLAY --> START --> END
+        END --> C
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. CELEBRATE es el único comando cuyo EXECUTE lleva a un estado dedicado `CELEBRATING` (no `EXECUTING`).
+
 ## Forma
 
 ```ts

@@ -6,6 +6,35 @@ Detenerse. El niño dice "ROBI para"; el operador usa el botón de pausa. STOP v
 
 Único comando cuyo EXECUTE lleva directo a IDLE, sin pasar por EXECUTING. Refleja su semántica: "termina todo".
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "ROBI para"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → IDLE directo (NO EXECUTING)"]
+        BR["SAY audioUrl stop-NN.mp3"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> COMP
+    end
+
+    SVR -->|SAY| DISP
+
+    subgraph DISP["📺 Display"]
+        PLAY[playSay]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        PLAY --> START --> END
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. STOP es el único comando cuyo EXECUTE va directo a IDLE (sin pasar por EXECUTING).
+
 ## Forma
 
 ```ts

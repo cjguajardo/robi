@@ -6,6 +6,37 @@ Saludo. El niño dice "hola ROBI" / "buenos días"; el operador usa el botón "�
 
 Comando de acción con sprite de waving. Audio pregrabado, state `EXECUTING`, 1s de waving visible post-audio.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "hola ROBI"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → EXECUTING"]
+        BR["SAY audioUrl greet-NN.mp3"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> COMP
+    end
+
+    SVR -->|SAY| DISP
+
+    subgraph DISP["📺 Display"]
+        PLAY[playSay]
+        WAVE["waving sprite 1s visible"]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        PLAY --> START --> END
+        END --> WAVE
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. Action command — el sprite `waving` se mantiene 1s post-audio vía `actionAnimationMs(GREET) = 1000`.
+
 ## Forma
 
 ```ts

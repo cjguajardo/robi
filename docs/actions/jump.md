@@ -6,6 +6,37 @@ Salto vertical **en el lugar**. No avanza en la cuadrícula, no rota. La animaci
 
 Comando de acción vertical in-place; sin cambio de position ni direction; usa weighted `frameSequence` para emular cadencia de salto real.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "ROBI salta"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → EXECUTING, pendingMove=null"]
+        BR["SAY audioUrl jump-NN.mp3"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> COMP
+    end
+
+    SVR -->|SAY| DISP
+
+    subgraph DISP["📺 Display (Robi.tsx + avatar-jump CSS)"]
+        PLAY[playSay]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        JUMP[avatar-jump translateY CSS]
+        PLAY --> START --> END
+        START -.->|anim| JUMP
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. La traslación vertical viene del CSS `@keyframes avatar-jump`, no del reducer (no hay `APPLY_MOVEMENT`). `jumpKey` React key fuerza re-mount del wrap en cada JUMP para reiniciar la animación CSS.
+
 ## Forma
 
 ```ts

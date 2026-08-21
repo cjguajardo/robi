@@ -6,6 +6,37 @@ Bailar. El niño dice "ROBI baila"; el operador usa el botón "🎵".
 
 Comando de acción con sprite `dancing`. Sin movimiento, 2s de baile visible.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "ROBI baila"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → EXECUTING"]
+        BR["SAY audioUrl dance-NN.mp3"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> COMP
+    end
+
+    SVR -->|SAY| DISP
+
+    subgraph DISP["📺 Display"]
+        PLAY[playSay]
+        DANCING["dancing sprite 2s visible"]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        PLAY --> START --> END
+        END --> DANCING
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. Action command — sprite `dancing` 2s post-audio.
+
 ## Forma
 
 ```ts

@@ -6,6 +6,36 @@ Caminar a la izquierda: rota el avatar a WEST y (después del audio) lo desplaza
 
 Comando de movimiento lateral izquierdo; direction WEST inmediata, position deferred hasta `APPLY_MOVEMENT` post-audio.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "camina a la izquierda N pasos"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → direction WEST + pendingMove"]
+        BR["SAY audioUrl walk-left-01.mp3"]
+        WAIT["waitForSpeechEnded"]
+        APPLY["APPLY_MOVEMENT → position.x -= steps"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> APPLY --> COMP
+    end
+
+    SVR -->|SAY + WORLD_CHANGED ×2| DISP
+
+    subgraph DISP["📺 Display (Robi.tsx)"]
+        PLAY[playSay]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        PLAY --> START --> END
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server node · 🟩 display node. Secuencia lineal (sin paralelismo en este comando). `APPLY_MOVEMENT` se ejecuta DESPUÉS de `SPEECH_ENDED` por eso el position update es deferred.
+
 ## Forma
 
 ```ts

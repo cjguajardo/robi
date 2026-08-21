@@ -6,6 +6,39 @@ Fallback cuando nada matchea. Cara confundida + mensaje genérico.
 
 Único comando cuyo EXECUTE lleva a `CONFUSED` (no `EXECUTING` ni `CELEBRATING`). Es la única ruta al estado `CONFUSED` además de un `ERROR` explícito.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    PARSE[🖥️ parser.ts / LLM fallback]
+    USER([👤 frase sin match]) -->|TRANSCRIPT| PARSE
+    PARSE -->|COMMAND UNKNOWN| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → CONFUSED (no EXECUTING)"]
+        BR["SAY audioUrl unknown-NN.mp3"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> COMP
+    end
+
+    SVR -->|SAY| DISP
+
+    subgraph DISP["📺 Display"]
+        PLAY[playSay]
+        CF["confused sprite (breve)"]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        PLAY --> START --> END
+        END --> CF
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. Único comando cuyo EXECUTE lleva directo a `CONFUSED` (no `EXECUTING`). El path del parser local tiene su propio pre-check de LLM fallback (`/api/interpret`) antes de broadcastear `UNKNOWN` definitivo.
+
 ## Forma
 
 ```ts

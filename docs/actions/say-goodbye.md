@@ -6,6 +6,37 @@ Despedida. El niño dice "chau ROBI" / "adiós".
 
 Comando con un único SAY y sprite `waving` (reutilizado de GREET). 1s de waving visible post-audio.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "chau ROBI"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → EXECUTING"]
+        BR["SAY audioUrl goodbye-NN.mp3"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> COMP
+    end
+
+    SVR -->|SAY| DISP
+
+    subgraph DISP["📺 Display"]
+        PLAY[playSay]
+        WAVE["waving sprite 1s visible (reutilizado de GREET)"]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        PLAY --> START --> END
+        END --> WAVE
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. Action command — sprite `waving` (compartido con GREET).
+
 ## Forma
 
 ```ts

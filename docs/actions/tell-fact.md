@@ -6,6 +6,42 @@ Contar un dato curioso. El niño dice "sabías que…" / "ROBI dato curioso".
 
 Comando de contenido con preámbulo + dato + gap de 1.2s. Sprite = `speaking` (igual que TELL_JOKE).
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "sabías que…"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts:185)"]
+        EXEC["EXECUTE"]
+        BR1["SAY fact-preamble audioUrl"]
+        SLEEP["sleep 1200ms"]
+        BR2["SAY fact audioUrl"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR1 --> SLEEP --> BR2 --> WAIT --> COMP
+    end
+
+    SVR -->|SAY ×2| DISP
+
+    subgraph DISP["📺 Display"]
+        P1[playSay preamble]
+        S1[play → SPEECH_STARTED]
+        E1[ended → SPEECH_ENDED]
+        P2[playSay fact]
+        S2[play → SPEECH_STARTED]
+        E2[ended → SPEECH_ENDED]
+        P1 --> S1 --> E1
+        P2 --> S2 --> E2
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    E1 -.->|"no waiter"| BR1
+    E2 -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. Mismo patrón server que JOKE/RIDDLE. **Colisión**: `sabías que…?` con `?` → ANSWER_QUESTION (pre-check de `isQuestionIntent`); sin `?` → TELL_FACT.
+
 ## Forma
 
 ```ts

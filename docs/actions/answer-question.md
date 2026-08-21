@@ -8,6 +8,62 @@ Respuesta a pregunta abierta. **El único comando que toca LLM y TTS en runtime.
 
 Fork en T=0: preámbulo suena mientras LLM piensa. Cuando LLM responde, TTS sintetiza server-side como `data:audio/mpeg;base64,…` y se broadcastea inline. Tres niveles de degradación silenciosa.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "qué es un robot?"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts:165)"]
+        EXEC["EXECUTE → EXECUTING"]
+
+        subgraph PAR["⚡ Parallel @ T=0"]
+            direction TB
+            LLM["LLM.call question"]
+            BR1["SAY preamble audioUrl"]
+        end
+
+        SYN["synthesizeSpeech text → mp3"]
+        BR2["SAY text + audioUrl data:audio/mpeg"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+
+        EXEC --> LLM
+        EXEC --> BR1
+        LLM --> SYN
+        SYN --> BR2
+        BR1 -.->|"no waiter"| BR2
+        BR2 --> WAIT --> COMP
+    end
+
+    subgraph EXT["☁️ OpenAI"]
+        OAI[(Chat gpt-4o-mini)]
+        OAT[(TTS gpt-4o-mini-tts)]
+    end
+
+    SVR -->|SAY ×2| DISP
+
+    subgraph DISP["📺 Display"]
+        P1["playSay preamble.mp3"]
+        P2["playSay data:audio/mpeg inline"]
+        S1[play → SPEECH_STARTED]
+        E1[ended → SPEECH_ENDED]
+        S2[play → SPEECH_STARTED]
+        E2[ended → SPEECH_ENDED]
+        P1 --> S1 --> E1
+        P2 --> S2 --> E2
+    end
+
+    LLM -.->|HTTP| OAI
+    SYN -.->|HTTP| OAT
+
+    DISP -->|SPEECH_ENDED| SVR
+    E1 -.->|"no gate"| BR1
+    E2 -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟨 sección paralela (fork @ T=0) · 🟩 display · 🟦🟦 external API. **Único paralelismo real del codebase**: preámbulo suena mientras LLM piensa. Después del LLM, todo es estrictamente secuencial (necesitamos el texto para sintetizar y broadcastear). Los dos HTTP externos son también dentro de ese pipeline secuencial.
+
 ## Forma
 
 ```ts

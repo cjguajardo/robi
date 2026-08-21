@@ -6,6 +6,42 @@ Contar una adivinanza. El niño dice "dame una adivinanza" / "ROBI acertijo".
 
 Comando de contenido con preámbulo + adivinanza + gap de 1.2s. **Sprite = `thinking`** (mano en la barbilla) en lugar de `speaking` — la adivinanza requiere pensar.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "dame una adivinanza"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts:185)"]
+        EXEC["EXECUTE"]
+        BR1["SAY riddle-preamble audioUrl"]
+        SLEEP["sleep 1200ms"]
+        BR2["SAY riddle audioUrl"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR1 --> SLEEP --> BR2 --> WAIT --> COMP
+    end
+
+    SVR -->|SAY ×2| DISP
+
+    subgraph DISP["📺 Display"]
+        P1[playSay preamble]
+        S1[play → SPEECH_STARTED]
+        E1[ended → SPEECH_ENDED]
+        P2[playSay riddle]
+        S2[play → SPEECH_STARTED]
+        E2[ended → SPEECH_ENDED]
+        P1 --> S1 --> E1
+        P2 --> S2 --> E2
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    E1 -.->|"no waiter"| BR1
+    E2 -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. Idéntico a TELL_JOKE (mismo patrón server) pero el sprite durante el contenido es **`thinking`** (mano en la barbilla), no `speaking` — la adivinanza pide pensar.
+
 ## Forma
 
 ```ts

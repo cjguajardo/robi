@@ -6,6 +6,36 @@ Espejo de [WALK_LEFT](./walk-left.md): rota el avatar a EAST y lo desplaza `+ste
 
 Comando de movimiento lateral derecho; direction EAST inmediata, position deferred hasta `APPLY_MOVEMENT` post-audio.
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "camina a la derecha N pasos"]) -->|COMMAND| SVR
+
+    subgraph SVR["🖥️ Server (server.ts)"]
+        EXEC["EXECUTE → direction EAST + pendingMove"]
+        BR["SAY audioUrl walk-right-01.mp3"]
+        WAIT["waitForSpeechEnded"]
+        APPLY["APPLY_MOVEMENT → position.x += steps"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> APPLY --> COMP
+    end
+
+    SVR -->|SAY + WORLD_CHANGED ×2| DISP
+
+    subgraph DISP["📺 Display (Robi.tsx)"]
+        PLAY[playSay]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        PLAY --> START --> END
+    end
+
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server · 🟩 display. Espejo de [WALK_LEFT](./walk-left.md) — direction EAST, `pendingMove.x = +steps`.
+
 ## Forma
 
 ```ts

@@ -6,6 +6,47 @@ Volver al origen. El niño dice "ROBI vuelve al inicio"; el operador usa el bot�
 
 Único comando que usa TTS dinámico (literal "Vuelvo al inicio."). Tiene DOS paths: vía comando (queue-friendly) o vía evento (inmediato, corta todo).
 
+## Flowchart
+
+```mermaid
+flowchart LR
+    USER([👤 "vuelve al inicio"]) -->|COMMAND| SVR
+    OPER([🎛️ operador botón 🏠]) -.->|inmediato| EMG
+
+    subgraph SVR["🖥️ Server — Path A (comando voice)"]
+        EXEC["EXECUTE → initialWorld"]
+        BR["SAY sin audioUrl (literal)"]
+        WAIT["waitForSpeechEnded"]
+        COMP["COMPLETE → IDLE"]
+        EXEC --> BR --> WAIT --> COMP
+    end
+
+    subgraph EMG["⚠️ Path B (emergency, server.ts:357)"]
+        direction TB
+        ING["ingestWorldEvent RESET"]
+        CLEAR["queue = [], processing = false"]
+        BC["broadcast RESET + STATE_CHANGED IDLE"]
+        ING --> CLEAR --> BC
+    end
+
+    SVR -->|SAY sin audioUrl| DISP
+    EMG -->|RESET + STATE_CHANGED| DISP
+
+    subgraph DISP["📺 Display (Robi.tsx)"]
+        PLAY["playSay → fetch /api/tts"]
+        START[play → SPEECH_STARTED]
+        END[ended → SPEECH_ENDED]
+        STOP["stopAudio (Path B)"]
+        PLAY --> START --> END
+    end
+
+    EMG --> STOP
+    DISP -->|SPEECH_ENDED| SVR
+    END -.->|resolves| WAIT
+```
+
+**Leyenda**: 🟦 server (Path A) · 🟩 display · 🩷 emergency path (Path B). RESET tiene DOS rutas: comando (queue-friendly con SAY literal) o evento inmediato (corta cola + audio). Único comando que va por TTS dinámico (`/api/tts`) en lugar de `/audio/*.mp3`.
+
 ## Forma
 
 ```ts
