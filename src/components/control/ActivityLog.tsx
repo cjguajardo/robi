@@ -1,9 +1,12 @@
 // Activity log — rolling list + emergency controls in one card.
-// Detener / Reiniciar live at the bottom of the card (matches iOS feel).
+// Detener / Reiniciar always visible at the top (critical controls).
+// History list below is collapsible (closed by default on mobile) to
+// keep the page fitting in one screen.
 
+import { useState } from "react";
 import type { RobiCommand } from "@/types/robi";
 import { COMMAND_LABEL } from "@/lib/robi/commands";
-import { MicIcon, HandIcon, PauseIcon, RefreshIcon } from "./Icons";
+import { MicIcon, HandIcon, PauseIcon, RefreshIcon, ChevronIcon } from "./Icons";
 import { spawnRipple } from "./ripple";
 
 export interface ActivityItem {
@@ -39,26 +42,15 @@ export function describe(cmd: RobiCommand): string {
 }
 
 export function ActivityLog({ items, onPause, onResume, onReset, paused }: Props) {
+  // Closed by default — saves vertical space on phone viewports.
+  // Controlled (not <details>) so we can animate max-height cleanly.
+  const [open, setOpen] = useState(false);
+
   return (
     <div className="cmd-stack">
       <h2 className="section-title">Actividad</h2>
       <section className="card activity-card">
-        {items.length === 0 ? (
-          <p className="empty">Sin actividad todavía.</p>
-        ) : (
-          <ul>
-            {items.map((item) => (
-              <li key={item.id} className={item.manual ? "manual" : "voice"}>
-                <span className="src" aria-label={item.manual ? "manual" : "voz"}>
-                  {item.manual ? <HandIcon size={14} /> : <MicIcon size={14} />}
-                </span>
-                <span className="t">{item.transcript ?? describe(item.command)}</span>
-                <span className="c mono">{describe(item.command)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
+        {/* Emergency controls — always visible, top of the card. */}
         <div className="emergency-inline">
           {paused ? (
             <button
@@ -97,6 +89,45 @@ export function ActivityLog({ items, onPause, onResume, onReset, paused }: Props
             <RefreshIcon size={16} />
             <span>Reiniciar</span>
           </button>
+        </div>
+
+        {/* History — collapsible. Default closed so the page fits on
+            a phone screen without scrolling. The toggle shows the
+            current count so the operator knows there's content behind
+            it. */}
+        <button
+          type="button"
+          className="history-toggle"
+          aria-expanded={open}
+          aria-controls="activity-history"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className="ht-label">
+            Historial{items.length > 0 ? ` (${items.length})` : ""}
+          </span>
+          <ChevronIcon size={16} className={`ht-chevron ${open ? "open" : ""}`} />
+        </button>
+
+        <div
+          id="activity-history"
+          className={`history-wrap ${open ? "open" : ""}`}
+          aria-hidden={!open}
+        >
+          {items.length === 0 ? (
+            <p className="empty">Sin actividad todavía.</p>
+          ) : (
+            <ul>
+              {items.map((item) => (
+                <li key={item.id} className={item.manual ? "manual" : "voice"}>
+                  <span className="src" aria-label={item.manual ? "manual" : "voz"}>
+                    {item.manual ? <HandIcon size={14} /> : <MicIcon size={14} />}
+                  </span>
+                  <span className="t">{item.transcript ?? describe(item.command)}</span>
+                  <span className="c mono">{describe(item.command)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
     </div>

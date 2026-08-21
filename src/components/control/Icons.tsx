@@ -227,6 +227,14 @@ export const AlertIcon = (p: IconProps) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="9" />
     <path d="M12 7v6" />
-    <circle cx="12" cy="16.5" r="0.5" fill="currentColor" />
+    <circle cx="12" cy="16.5" r="0.5" fill="currentColor" stroke="none" />
+  </Icon>
+);
+
+/* Chevron — used by collapsible history toggle. Rotated 180° via CSS
+   when the section is open (instead of swapping icon variants). */
+export const ChevronIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 9l6 6 6-6" />
   </Icon>
 );

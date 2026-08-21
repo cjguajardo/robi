@@ -2,11 +2,18 @@
    Imported by src/pages/control.astro.
    All `.controller` / `.conn-*` / `.control-hero` / `.badge*` / `.wake-btn`
    / `.mic*` / `.cmd-*` / `.sg-*` / `.dpad*` / `.pill` / `.actions-pill`
-   / `.ripple` / `.activity-card` / `.toaster` / `.toast*` rules belong
-   to this view.
+   / `.ripple` / `.activity-card` / `.history-*` / `.toaster` / `.toast*`
+   rules belong to this view.
 
    Naming note: this view uses `.control-hero` instead of `.hero` to
-   avoid colliding with the home page's `.hero` from global.css. */
+   avoid colliding with the home page's `.hero` from global.css.
+
+   Mobile-first: the control view is meant for phones (PRD §RNF-003),
+   so the default styles target modern iPhones (12 Pro Max onward).
+   Everything must fit within the visible viewport without scrolling —
+   `100dvh` accounts for the Safari URL bar collapsing on scroll, and
+   `env(safe-area-inset-*)` reserves room for the notch / home
+   indicator. No retro-compat: smaller targets, tighter gaps. */
 
 /* ===== Tokens — iOS-leaning palette =====
    Scoped to `--r-*` to avoid colliding with the global palette in
@@ -27,7 +34,7 @@
   --r-accent: #00d4ff;        /* iOS-style cyan */
   --r-accent-glow: rgba(0, 212, 255, 0.45);
   --r-bad: #ff453a;
-  --r-radius-card: 26px;
+  --r-radius-card: 22px;
   --r-radius-pill: 999px;
   --r-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --r-ease: cubic-bezier(0.21, 1.02, 0.73, 1);
@@ -59,46 +66,63 @@ body::before {
   z-index: -1;
 }
 
-/* ===== Layout ===== */
+/* ===== Layout — fills viewport, scrolls only when history opens =====
+   `100dvh` is the dynamic viewport height — it shrinks when Safari
+   shows the URL bar and grows when it collapses. `100vh` is the
+   fallback for browsers that don't support `dvh`. Together they let
+   the controller fit on screen regardless of chrome state.
+
+   `env(safe-area-inset-*)` reserves room for the notch (top) and the
+   home indicator (bottom) on modern iPhones. The `max()` with a
+   hard-coded floor ensures older devices without safe-area support
+   still get sensible padding.
+
+   `overflow-y: auto` lets the page scroll internally only when the
+   history panel is expanded (closed by default — fits in viewport
+   with no scroll). The body keeps its `overflow: hidden` so the page
+   itself never scrolls. */
 .controller {
+  height: 100vh;
+  height: 100dvh;
   max-width: 540px;
-  /* Cap at 80vh so the iOS-style background stays visible at the bottom
-     (20vh breathing room). Body has overflow:hidden globally, so the
-     overflow-y:auto here is what makes tall content reachable — the
-     controller scrolls internally instead of clipping. */
-  max-height: 100%;
   margin: 0 auto;
-  padding: 22px 18px 32px;
+  padding:
+    max(env(safe-area-inset-top), 14px)
+    14px
+    max(env(safe-area-inset-bottom), 16px);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 10px;
   overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ===== Header — flat, big bold ===== */
 .hdr {
-  padding: 4px 4px 0;
+  flex: 0 0 auto;
+  padding: 0;
 }
 
 /* Brand logo — replaces the text brand-title. Sourced from
    /public/logo.webp (242×128, "ROBI — El amigo del aula"). */
 .brand-logo {
   display: block;
-  width: 168px;
+  width: 124px;
   height: auto;
-  margin: 4px 0 6px;
+  margin: 0 0 2px;
   filter: drop-shadow(0 4px 16px rgba(0, 212, 255, 0.18));
 }
 
 /* ===== Connection row — small icon with notification badge ===== */
 .conn-row {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 4px 0;
+  gap: 8px;
+  padding: 0;
   color: var(--r-bad);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -108,8 +132,8 @@ body::before {
   position: relative;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--r-border);
@@ -120,16 +144,16 @@ body::before {
 
 .conn-dot {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: -5px;
+  right: -5px;
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--r-bad);
   color: white;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   border: 2px solid var(--r-bg-1);
@@ -139,13 +163,14 @@ body::before {
   letter-spacing: -0.01em;
 }
 
-/* ===== Section titles — big bold white ===== */
+/* ===== Section titles — compact ===== */
 .section-title {
+  flex: 0 0 auto;
   margin: 0;
-  padding: 4px 4px 0;
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  padding: 2px 2px 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--r-fg);
 }
 
@@ -161,13 +186,17 @@ body::before {
     0 24px 48px rgba(0, 0, 0, 0.30);
 }
 
-/* ===== Hero card — centered face + state + CTA ===== */
+/* ===== Hero card — face + state + wake/mic =====
+   Compact: smaller badge, smaller mic, tighter padding. The whole
+   card is a `flex: 0 0 auto` so it sizes to its content — the parent
+   `.controller` decides how to distribute the remaining height. */
 .control-hero {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 28px 24px 24px;
+  gap: 8px;
+  padding: 14px 16px 12px;
   text-align: center;
 }
 
@@ -182,15 +211,15 @@ body::before {
 }
 
 .badge {
-  filter: drop-shadow(0 12px 32px var(--r-accent-glow));
+  filter: drop-shadow(0 8px 20px var(--r-accent-glow));
 }
 
 .badge-celebrating { animation: badge-celebrate 0.6s ease-in-out infinite; }
 
 @keyframes badge-celebrate {
   0%, 100% { transform: translateY(0)    rotate(0); }
-  25%      { transform: translateY(-4px) rotate(-5deg); }
-  75%      { transform: translateY(-4px) rotate(5deg); }
+  25%      { transform: translateY(-3px) rotate(-5deg); }
+  75%      { transform: translateY(-3px) rotate(5deg); }
 }
 
 .badge-paused-overlay {
@@ -198,37 +227,37 @@ body::before {
   inset: 0;
   display: grid;
   place-items: center;
-  grid-template-columns: 8px 8px;
-  gap: 8px;
+  grid-template-columns: 6px 6px;
+  gap: 6px;
   background: rgba(10, 20, 41, 0.5);
   border-radius: 50%;
 }
 
 .badge-paused-overlay .bar {
-  width: 8px;
-  height: 32px;
+  width: 6px;
+  height: 24px;
   background: var(--r-bad);
   border-radius: 2px;
 }
 
 .hero-state {
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 /* ===== Wake button — solid cyan ===== */
 .wake-btn {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 26px;
+  gap: 8px;
+  padding: 10px 22px;
   border-radius: var(--r-radius-pill);
   border: none;
   background: var(--r-accent);
   color: #00131e;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -236,7 +265,7 @@ body::before {
   overflow: hidden;
   isolation: isolate;
   box-shadow:
-    0 12px 28px rgba(0, 212, 255, 0.40),
+    0 10px 24px rgba(0, 212, 255, 0.40),
     0 1px 0  rgba(255, 255, 255, 0.30) inset;
   transition:
     transform 200ms var(--r-spring),
@@ -247,7 +276,7 @@ body::before {
 .wake-btn:hover {
   filter: brightness(1.05);
   box-shadow:
-    0 14px 32px rgba(0, 212, 255, 0.50),
+    0 12px 28px rgba(0, 212, 255, 0.50),
     0 1px 0  rgba(255, 255, 255, 0.35) inset;
 }
 
@@ -257,23 +286,23 @@ body::before {
 .hero-hint {
   margin: 0;
   color: var(--r-fg-dim);
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: -0.01em;
 }
 
-/* ===== Mic — kept smaller, hero-level ===== */
+/* ===== Mic — compact hero-level ===== */
 .mic {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 0;
 }
 
 .mic-btn {
   position: relative;
-  width: 132px;
-  height: 132px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   border: 1.5px solid rgba(0, 212, 255, 0.40);
   background: rgba(0, 212, 255, 0.08);
@@ -283,10 +312,10 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   overflow: hidden;
   isolation: isolate;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   transition:
     transform 220ms var(--r-spring),
     background 280ms,
@@ -295,7 +324,7 @@ body::before {
 
 .mic-btn .ring {
   position: absolute;
-  inset: -6px;
+  inset: -4px;
   border-radius: 50%;
   border: 1.5px solid var(--r-accent);
   opacity: 0.4;
@@ -317,7 +346,7 @@ body::before {
 }
 
 .mic-btn .lb {
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--r-fg-dim);
@@ -348,8 +377,8 @@ body::before {
 .mic-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 @keyframes mic-glow {
-  0%, 100% { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35), 0 0 0 0  rgba(255, 69, 58, 0.45); }
-  50%      { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35), 0 0 0 14px rgba(255, 69, 58, 0); }
+  0%, 100% { box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 0 0 0  rgba(255, 69, 58, 0.45); }
+  50%      { box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 0 0 10px rgba(255, 69, 58, 0); }
 }
 
 @keyframes mic-ring {
@@ -371,36 +400,37 @@ body::before {
 
 .mic-error {
   color: var(--r-bad);
-  font-size: 13px;
-  margin: 4px 0 0;
+  font-size: 12px;
+  margin: 2px 0 0;
   text-align: center;
 }
 
 /* ===== Command stack — group title + panels ===== */
 .cmd-stack {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
 
 /* ===== Pasos + D-pad row ===== */
 .mov-row {
   display: grid;
   grid-template-columns: 1fr 1.3fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pasos-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px 14px;
+  gap: 8px;
+  padding: 10px 12px;
   justify-content: center;
 }
 
 .pasos-label {
   color: var(--r-fg-dim);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -413,7 +443,7 @@ body::before {
   background: transparent;
   border: none;
   box-shadow: none;
-  gap: 4px;
+  gap: 2px;
   isolation: isolate;
 }
 
@@ -450,13 +480,13 @@ body::before {
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 36px;
+  width: 22px;
+  height: 30px;
   border-radius: 6px;
   border: none;
   background: transparent;
   color: var(--r-fg-mute);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: color 200ms;
@@ -474,7 +504,7 @@ body::before {
 
 /* D-pad — pills in + cross pattern */
 .dpad-panel {
-  padding: 14px;
+  padding: 10px;
   display: grid;
   place-items: center;
 }
@@ -483,7 +513,7 @@ body::before {
   display: grid;
   grid-template-columns: 1fr 1.3fr 1fr;
   grid-template-rows: auto auto auto;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
@@ -500,14 +530,14 @@ body::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 14px;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
   border-radius: var(--r-radius-pill);
   border: 1px solid rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.04);
   color: var(--r-fg);
-  font-size: 14.5px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -536,21 +566,21 @@ body::before {
   position: relative;
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   color: var(--r-fg);
   opacity: 0.85;
 }
 
 .pill .lb { color: var(--r-fg); }
 
-/* Icon-only pills — used by the dpad. No text label, larger hit
-   target (60px square), accent-tinted so the kid sees it's tappable.
-   The accent matches the cyan brand color and reads well against the
-   dark glass card behind it. */
+/* Icon-only pills — used by the dpad. No text label, square hit
+   target, accent-tinted so the kid sees it's tappable. The accent
+   matches the cyan brand color and reads well against the dark glass
+   card behind it. */
 .pill.icon-only {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   background: rgba(110, 231, 255, 0.10);
   border-color: rgba(110, 231, 255, 0.25);
@@ -562,8 +592,8 @@ body::before {
 }
 
 .pill.icon-only .ic-wrap {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   opacity: 1;
   color: var(--r-fg);
 }
@@ -618,20 +648,20 @@ body::before {
 .actions-pill {
   display: flex;
   align-items: stretch;
-  padding: 5px;
+  padding: 4px;
   gap: 0;
   border-radius: var(--r-radius-pill);
 }
 
 .actions-pill .pill {
   flex: 1;
-  height: 48px;
+  height: 40px;
   background: transparent;
   border: none;
   border-radius: var(--r-radius-pill);
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 500;
-  gap: 8px;
+  gap: 6px;
 }
 
 .actions-pill .pill:hover {
@@ -653,7 +683,7 @@ body::before {
   border-bottom-right-radius: 0;
 }
 
-.actions-pill .pill .ic-wrap { width: 20px; height: 20px; opacity: 0.95; }
+.actions-pill .pill .ic-wrap { width: 18px; height: 18px; opacity: 0.95; }
 
 /* ===== Ripple ===== */
 .ripple {
@@ -672,31 +702,91 @@ body::before {
 
 /* ===== Activity card ===== */
 .activity-card {
-  padding: 18px 18px 14px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
 
-.activity-card ul {
+/* History toggle — sits between the emergency controls and the
+   collapsible list. Looks like a row button with a chevron. */
+.history-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  margin: 0;
+  background: rgba(8, 14, 30, 0.45);
+  border: 1px solid var(--r-border);
+  border-radius: 12px;
+  color: var(--r-fg-dim);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background 160ms,
+    color 160ms,
+    border-color 160ms;
+}
+
+.history-toggle:hover {
+  background: rgba(8, 14, 30, 0.65);
+  border-color: var(--r-border-strong);
+  color: var(--r-fg);
+}
+
+.history-toggle:active { transform: scale(0.99); }
+
+.ht-label { font-variant-numeric: tabular-nums; }
+
+.ht-chevron {
+  transition: transform 220ms var(--r-ease);
+  opacity: 0.7;
+}
+
+.ht-chevron.open { transform: rotate(180deg); opacity: 1; }
+
+/* Collapsible history list. `max-height` transition lets the list
+   grow/shrink smoothly without measuring DOM. The collapsed value
+   is 0; the open value is large enough to cover MAX_ACTIVITY (4) rows
+   in the activity card — bumping it higher than needed is fine, the
+   transition just runs a hair longer past the natural end. */
+.history-wrap {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height 280ms var(--r-ease),
+    opacity    200ms var(--r-ease);
+}
+
+.history-wrap.open {
+  max-height: 360px;
+  opacity: 1;
+}
+
+.history-wrap ul {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 4px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .activity-card li {
   display: grid;
-  grid-template-columns: 28px 1fr auto;
+  grid-template-columns: 24px 1fr auto;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 6px 8px;
   background: rgba(8, 14, 30, 0.55);
   border: 1px solid var(--r-border);
-  border-radius: 14px;
-  font-size: 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
   animation: act-in 280ms var(--r-ease);
 }
 
@@ -708,8 +798,8 @@ body::before {
 .activity-card .src {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
 }
 
@@ -725,16 +815,16 @@ body::before {
 
 .activity-card .c {
   color: var(--r-fg-dim);
-  font-size: 12px;
-  padding: 3px 10px;
+  font-size: 11px;
+  padding: 2px 8px;
   border-radius: var(--r-radius-pill);
   background: rgba(255, 255, 255, 0.06);
 }
 
 .activity-card .empty {
   color: var(--r-fg-mute);
-  font-size: 15px;
-  margin: 8px 0 0;
+  font-size: 13px;
+  margin: 8px 0 4px;
   text-align: center;
   letter-spacing: -0.01em;
 }
@@ -748,10 +838,7 @@ body::before {
 .emergency-inline {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 4px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 6px;
 }
 
 .emergency-inline .pill.ebtn.stop {
@@ -781,7 +868,7 @@ body::before {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 24px;
+  bottom: max(env(safe-area-inset-bottom), 24px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -794,8 +881,8 @@ body::before {
   pointer-events: auto;
   min-width: min(320px, 92vw);
   max-width: 92vw;
-  padding: 12px 18px;
-  border-radius: 16px;
+  padding: 10px 16px;
+  border-radius: 14px;
   background: rgba(20, 30, 56, 0.92);
   backdrop-filter: blur(22px) saturate(150%);
   -webkit-backdrop-filter: blur(22px) saturate(150%);
@@ -804,7 +891,7 @@ body::before {
     0 12px 36px rgba(0, 0, 0, 0.45),
     0 1px 0 rgba(255, 255, 255, 0.06) inset;
   color: var(--r-fg);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.35;
   transform-origin: bottom center;
   transition:
@@ -816,20 +903,14 @@ body::before {
 .toast[data-state="closed"] { opacity: 0; transform: translateY(14px) scale(0.96); }
 
 .toast-title { font-weight: 600; margin: 0; }
-.toast-desc  { color: var(--r-fg-dim); font-size: 12.5px; margin: 2px 0 0; }
+.toast-desc  { color: var(--r-fg-dim); font-size: 12px; margin: 2px 0 0; }
 
 .toast-error {
   border-color: rgba(255, 69, 58, 0.45);
   background: rgba(60, 20, 25, 0.92);
 }
 
-/* ===== Small screens ===== */
-@media (max-width: 380px) {
-  .brand-logo         { width: 140px; }
-  .section-title      { font-size: 28px; }
-  .control-hero       { padding: 22px 18px 20px; }
-}
-
+/* ===== Reduced motion ===== */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
