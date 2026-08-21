@@ -1,28 +1,33 @@
 # AGENTS — ROBI
 
-Notes for AI agents working on this codebase. Complements `PRD.md` (what)
-and `DESIGN.md` (how). This file focuses on **non-obvious behavior** and
-**invariants** that an agent would otherwise have to re-derive from code.
+Notes for AI agents working on this codebase. Complements `PRD.md` (what),
+`DESIGN.md` (how), and the per-action files in `actions/` (per-command
+flow). This file focuses on **non-obvious behavior** and **invariants**
+that an agent would otherwise have to re-derive from code.
+
+---
+
+## Quick map
+
+- **Per-command flow** → `actions/<command>.md` (one file per `RobiCommand`)
+- **Global cross-cutting** (state machine, audio catalog, sprite system, realtime patterns) → `references.md`
+- **Product doc** (qué) → `PRD.md`
+- **Architecture doc** (cómo) → `DESIGN.md`
+- **ANSWER_QUESTION deep-dive** (the only LLM-using command) → `actions/answer-question.md`
 
 ---
 
 ## ANSWER_QUESTION flow (open-ended kid questions)
 
-The only command path that talks to an LLM at runtime. Everything else
-uses pre-recorded audio from `sonidos/audios/` via the audio catalog.
+**See [`actions/answer-question.md`](./actions/answer-question.md) for the
+complete flow diagram, state machine, fallback chain, and tweak points.**
 
-### Where it lives
+This section is kept brief on purpose — the canonical documentation lives
+in `actions/answer-question.md`. Highlights that are worth keeping here:
 
-- **Branch in `drainQueue()`** — `src/lib/realtime/server.ts` ~line 165.
-  Everything below is contained in that one `if` arm. Action commands
-  never enter it.
-- **Parser detection** — `src/lib/llm/system-prompt.ts` returns
-  `ANSWER_QUESTION` from the LLM-fallback parser when the kid's
-  transcript looks like a question ("qué es un robot", "por qué…").
-- **LLM call** — `src/lib/llm/answer-question.ts` calls
-  `gpt-4o-mini` with a kid-safe system prompt and a 15s timeout.
-  Returns `{text}` on success, `{text, audioUrl}` from the
-  `ANSWER_QUESTION_FALLBACK` catalog entry on any failure (no API key,
+- ANSWER_QUESTION is the **only** command path that touches an LLM at runtime. Everything else uses pre-recorded audio from `sonidos/audios/`.
+- Branch lives in `drainQueue()` (`src/lib/realtime/server.ts` ~line 165). Action commands never enter it.
+- `src/lib/llm/answer-question.ts` calls `gpt-4o-mini` with a kid-safe system prompt and 15s timeout.
   timeout, network error, empty response).
 - **Audio assets** —
   `sonidos/audios/question-preamble-01.mp3` (preamble, kid hears while
