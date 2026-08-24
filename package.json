@@ -3,6 +3,7 @@
   "type": "module",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.13.1",
   "description": "ROBI — Robot interactivo por voz para presentación escolar",
   "scripts": {
     "dev": "astro dev",
@@ -29,6 +30,7 @@
     "astro": "7.2.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tsx": "4.23.12",
     "ws": "8.21.3"
   },
   "devDependencies": {
@@ -36,7 +38,6 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "@types/ws": "8.18.1",
-    "tsx": "4.23.12",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   }
