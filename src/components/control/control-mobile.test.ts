@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ActivityLog, type ActivityItem } from "./ActivityLog";
 import { CommandPanel } from "./CommandPanel";
 import { Controller } from "./Controller";
+import { StageItemControl } from "./StageItemControl";
 
 const controlCss = readFileSync(
   new URL("../../styles/control.css", import.meta.url),
@@ -80,6 +81,26 @@ describe("/control mobile initial state", () => {
     expect(html).not.toContain('class="section-title">Acciones</h2>');
     expect(html).not.toContain('class="section-title">Contenido</h2>');
     expect(controlCss).toMatch(/\.quick-actions\s*{[^}]*grid-template-columns:\s*repeat\(3,\s*1fr\)/s);
+  });
+
+  it("offers one-click random-object placement above, left, or right", () => {
+    const html = renderToStaticMarkup(
+      createElement(StageItemControl, {
+        onAdd: vi.fn(),
+      }),
+    );
+
+    expect(html).toContain('aria-label="Agregar un objeto al escenario"');
+    expect(html).toContain("Objeto aleatorio");
+    for (const label of [
+      "Agregar objeto aleatorio a la izquierda",
+      "Agregar objeto aleatorio arriba de ROBI",
+      "Agregar objeto aleatorio a la derecha",
+    ]) {
+      expect(html).toContain(`aria-label="${label}"`);
+    }
+    expect(controlCss).toMatch(/\.stage-item-control\s*{[^}]*grid-template-columns:/s);
+    expect(controlCss).toMatch(/\.stage-position-button\s*{[^}]*min-height:\s*44px/s);
   });
 
   it("renders steps 1-5 as a keyboard-accessible calculator keypad with 3 selected", () => {

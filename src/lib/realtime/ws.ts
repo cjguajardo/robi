@@ -8,6 +8,7 @@ import {
   attachPeer,
   detachPeer,
   ingestCommand,
+  ingestStageItemRequest,
   ingestWorldEvent,
   ingestSay,
   ingestSpeechEvent,
@@ -84,6 +85,9 @@ function handleIncoming(event: RealtimeEvent): void {
       ingestCommand(cmd);
       break;
     }
+    case "ADD_STAGE_ITEM":
+      ingestStageItemRequest(event.payload.placement);
+      break;
     case "TRANSCRIPT":
       // Just store + broadcast — no execution yet (control view already shows it).
       ingestCommand({ type: "STOP" }, event.payload);
@@ -106,6 +110,8 @@ function handleIncoming(event: RealtimeEvent): void {
     case "SNAPSHOT":
     case "STATE_CHANGED":
     case "SAY":
+    case "WORLD_CHANGED":
+    case "STAGE_ITEM_CHANGED":
       // Server-driven; ignore from client.
       break;
     case "SPEECH_STARTED":

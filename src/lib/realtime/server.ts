@@ -7,6 +7,8 @@ import type {
   RobiCommand,
   RobiState,
   SessionSnapshot,
+  StageItem,
+  StageItemPlacement,
 } from "@/types/robi";
 import { initialWorld, reduceWorld, type RobiWorld } from "@/lib/robi/reducer";
 import { validateCommand } from "@/lib/robi/validator";
@@ -19,6 +21,11 @@ import {
 } from "@/lib/robi/responses";
 import { answerQuestion } from "@/lib/llm/answer-question";
 import { synthesizeSpeech } from "@/lib/tts/synthesize";
+import { MS_PER_BLOCK } from "@/lib/robi/commands";
+import {
+  collisionProgress,
+  createRandomStageItem,
+} from "@/lib/robi/stage-items";
 
 interface Peer {
   send: (event: RealtimeEvent) => void;
@@ -40,6 +47,7 @@ interface World {
   pendingAudioResolver: (() => void) | null;
   /** Timer handle for the safety timeout on `pendingAudioResolver`. */
   pendingAudioTimer: ReturnType<typeof setTimeout> | null;
+  stageItem: StageItem | null;
 }
 
 const state: World = {
@@ -51,7 +59,15 @@ const state: World = {
   processing: false,
   pendingAudioResolver: null,
   pendingAudioTimer: null,
+  stageItem: null,
 };
+
+interface ScheduledStageCollision {
+  timer: ReturnType<typeof setTimeout>;
+  cancel: () => void;
+}
+
+const scheduledStageCollisions = new Set<ScheduledStageCollision>();
 
 function snapshot(): SessionSnapshot {
   return {
@@ -61,6 +77,7 @@ function snapshot(): SessionSnapshot {
     lastTranscript: state.lastTranscript,
     lastCommand: state.lastCommand,
     paused: state.world.paused,
+    stageItem: state.stageItem,
   };
 }
 
@@ -157,6 +174,27 @@ async function drainQueue(): Promise<void> {
       direction: state.world.direction,
     },
   });
+
+  // JUMP has no world translation: its contact point is the CSS
+  // animation apex, halfway through the 700ms hop that starts as soon
+  // as COMMAND reaches /display. Schedule this independently from the
+  // speech lifecycle so the object disappears when ROBI visually
+  // touches it, not later when the audio ends.
+  const jumpTarget = state.stageItem;
+  if (jumpTarget && next.type === "JUMP") {
+    const progress = collisionProgress(
+      jumpTarget,
+      state.world.position,
+      state.world.position,
+      next,
+    );
+    if (progress !== null) {
+      void removeStageItemAfter(
+        jumpTarget,
+        actionAnimationMs(next) * progress,
+      );
+    }
+  }
 
   // The drainQueue now waits for the LAST audio of each command to
   // actually finish playing (driven by SPEECH_ENDED from the client),
@@ -279,8 +317,17 @@ async function drainQueue(): Promise<void> {
   // to this exact moment. Idempotent for commands without a pending
   // move (DANCE/CELEBRATE/etc.) — APPLY_MOVEMENT is a no-op when
   // `pendingMove` is null.
+  let walkCollision:
+    | { item: StageItem; progress: number }
+    | null = null;
   if (state.world.pendingMove) {
+    const from = state.world.position;
+    const target = state.stageItem;
     transition({ type: "APPLY_MOVEMENT" });
+    if (target) {
+      const progress = collisionProgress(target, from, state.world.position, next);
+      if (progress !== null) walkCollision = { item: target, progress };
+    }
     broadcast({
       type: "WORLD_CHANGED",
       payload: {
@@ -296,7 +343,12 @@ async function drainQueue(): Promise<void> {
   // SPEECH_ENDED via `waitForSpeechEnded` (audio ended); this just
   // adds the visual-action duration on top of the audio duration.
   const visualDelayMs = actionAnimationMs(next);
-  if (visualDelayMs > 0) {
+  if (walkCollision && visualDelayMs > 0) {
+    const collisionDelayMs = visualDelayMs * walkCollision.progress;
+    await removeStageItemAfter(walkCollision.item, collisionDelayMs);
+    const remainingDelayMs = visualDelayMs - collisionDelayMs;
+    if (remainingDelayMs > 0) await sleep(remainingDelayMs);
+  } else if (visualDelayMs > 0) {
     await sleep(visualDelayMs);
   }
   transition({ type: "COMPLETE" });
@@ -325,7 +377,7 @@ function actionAnimationMs(cmd: RobiCommand): number {
   switch (cmd.type) {
     case "WALK_LEFT":
     case "WALK_RIGHT":
-      return Math.max(400, cmd.steps * 350);
+      return Math.max(400, cmd.steps * MS_PER_BLOCK);
     case "JUMP":
       return 700;
     case "DANCE":
@@ -367,6 +419,7 @@ export function ingestWorldEvent(
 ): void {
   switch (event) {
     case "PAUSE":
+      cancelScheduledStageCollisions();
       state.queue = [];
       state.processing = false;
       transition({ type: "PAUSE" });
@@ -375,13 +428,38 @@ export function ingestWorldEvent(
       transition({ type: "RESUME" });
       break;
     case "RESET":
+      cancelScheduledStageCollisions();
       state.queue = [];
       state.processing = false;
       state.world = { ...initialWorld, state: "IDLE" };
+      state.stageItem = null;
       broadcast({ type: "RESET" });
+      broadcast({ type: "STAGE_ITEM_CHANGED", payload: null });
       broadcast({ type: "STATE_CHANGED", payload: "IDLE" });
       break;
   }
+}
+
+/**
+ * Place one random target relative to ROBI. The server owns randomness
+ * so /control and /display cannot diverge when multiple peers connect.
+ */
+export function ingestStageItemRequest(
+  placement: unknown,
+  random: () => number = Math.random,
+): StageItem | null {
+  if (placement !== "ABOVE" && placement !== "LEFT" && placement !== "RIGHT") {
+    return null;
+  }
+
+  const item = createRandomStageItem(
+    placement as StageItemPlacement,
+    state.world.position,
+    random,
+  );
+  state.stageItem = item;
+  broadcast({ type: "STAGE_ITEM_CHANGED", payload: item });
+  return item;
 }
 
 /** Request ROBI to say something — used after parse / command.
@@ -399,6 +477,7 @@ export function readSnapshot(): SessionSnapshot {
 
 /** Reset world + clear peers. Test-only helper. */
 export function _resetForTesting(): void {
+  cancelScheduledStageCollisions();
   state.world = { ...initialWorld };
   state.lastTranscript = "";
   state.lastCommand = null;
@@ -410,6 +489,45 @@ export function _resetForTesting(): void {
   }
   state.pendingAudioTimer = null;
   state.pendingAudioResolver = null;
+  state.stageItem = null;
+}
+
+function removeStageItemAfter(item: StageItem, delayMs: number): Promise<boolean> {
+  if (delayMs <= 0) return Promise.resolve(removeStageItemIfCurrent(item));
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (removed: boolean) => {
+      if (settled) return;
+      settled = true;
+      scheduledStageCollisions.delete(scheduled);
+      resolve(removed);
+    };
+    const timer = setTimeout(() => {
+      finish(removeStageItemIfCurrent(item));
+    }, delayMs);
+    const scheduled: ScheduledStageCollision = {
+      timer,
+      cancel: () => {
+        clearTimeout(timer);
+        finish(false);
+      },
+    };
+    scheduledStageCollisions.add(scheduled);
+  });
+}
+
+function removeStageItemIfCurrent(item: StageItem): boolean {
+  if (state.stageItem !== item) return false;
+  state.stageItem = null;
+  broadcast({ type: "STAGE_ITEM_CHANGED", payload: null });
+  return true;
+}
+
+function cancelScheduledStageCollisions(): void {
+  for (const scheduled of [...scheduledStageCollisions]) {
+    scheduled.cancel();
+  }
 }
 
 /**
@@ -558,8 +676,13 @@ function waitForSpeechEnded(expectedDurationMs?: number): Promise<void> {
 export function ingestSpeechEvent(type: "SPEECH_STARTED" | "SPEECH_ENDED"): void {
   switch (type) {
     case "SPEECH_STARTED":
-      // <audio>.play fired — switch to SPEAKING sprite (mouth moving).
-      transition({ type: "SPEAK" });
+      // JUMP uses its audio as an effort sound, not spoken dialogue.
+      // Keep EXECUTING so the jumping sprite remains visible while the
+      // mp3 plays. Every other command keeps the normal mouth-moving
+      // SPEAKING behavior.
+      if (state.lastCommand?.type !== "JUMP") {
+        transition({ type: "SPEAK" });
+      }
       break;
     case "SPEECH_ENDED":
       // <audio>.ended / error. Pick the right "back to" transition

@@ -356,6 +356,13 @@ describe("generateAnimationRule — CSS animation shorthand", () => {
     );
   });
 
+  it("runs the JUMP sprite sequence exactly once", () => {
+    const rule = generateAnimationRule(SPRITE_TRACKS.jumping);
+
+    expect(rule).toContain("step-end 1 both");
+    expect(rule).not.toContain("infinite");
+  });
+
   it("uses step-end timing for multi-frame tracks (hold each cell, jump crisply)", () => {
     // step-end holds the START value of each segment, jumps to the END
     // value at the segment boundary. Combined with our one-keyframe-per-cell

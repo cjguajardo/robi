@@ -121,6 +121,65 @@
   transform-origin: center;
 }
 
+/* One active target, anchored in world coordinates while the camera
+   keeps ROBI centered. Side targets sit on the ground; ABOVE is high
+   enough for the in-place jump animation to visually reach it. */
+.stage-item {
+  --stage-item-x: 0px;
+  --stage-item-transition: 350ms;
+  position: absolute;
+  left: 50%;
+  width: clamp(72px, 8vw, 112px);
+  aspect-ratio: 1;
+  transform: translateX(calc(-50% + var(--stage-item-x)));
+  transition: transform var(--stage-item-transition) ease-in-out;
+  pointer-events: none;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.38));
+}
+
+.stage-item-side {
+  bottom: calc(20vh + 14px);
+  bottom: calc(20dvh + 14px);
+  z-index: calc(var(--z-robi) - 1);
+}
+
+.stage-item-above {
+  bottom: calc(20vh + var(--sprite-height) - 32px);
+  bottom: calc(20dvh + var(--sprite-height) - 32px);
+  z-index: calc(var(--z-robi) + 1);
+}
+
+.stage-item svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.stage-item-star svg {
+  fill: #ffd84d;
+  stroke: #fff3a6;
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.stage-item-box .box-top { fill: #d8964a; }
+.stage-item-box .box-left { fill: #a8642f; }
+.stage-item-box .box-right { fill: #c47a38; }
+.stage-item-box .box-tape { fill: #f5d48b; }
+
+.stage-item-ball circle {
+  fill: #ff5d7d;
+  stroke: #ffd1dc;
+  stroke-width: 4;
+}
+.stage-item-ball path {
+  fill: none;
+  stroke: #8b2248;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
 .avatar-sprite {
   display: block;
   filter: drop-shadow(0 12px 32px rgba(110, 231, 255, 0.18));
@@ -302,11 +361,11 @@
   83.33%  { transform: translateY(-15px); }
   100%    { transform: translateY(0); }       /* landed */
 }
-.avatar-scaler.jumping .avatar-wrap {
+.avatar-wrap.jumping {
   animation: avatar-jump 700ms cubic-bezier(0.33, 0.0, 0.33, 1.0);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .avatar-sprite { animation: none !important; }
-  .avatar-scaler.jumping .avatar-wrap { animation: none !important; }
+  .avatar-wrap.jumping { animation: none !important; }
 }

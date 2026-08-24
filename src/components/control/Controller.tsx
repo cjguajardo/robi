@@ -2,7 +2,7 @@
 // iOS-style: flat header, big section titles, glass cards.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { RealtimeEvent, RobiCommand, RobiState, SessionSnapshot } from "@/types/robi";
+import type { RealtimeEvent, RobiCommand, RobiState, SessionSnapshot, StageItemPlacement } from "@/types/robi";
 import { MicrophoneButton } from "./MicrophoneButton";
 import { CommandPanel } from "./CommandPanel";
 import { RobiStateBadge } from "./RobiStateBadge";
@@ -10,6 +10,7 @@ import { ActivityLog, type ActivityItem } from "./ActivityLog";
 import { ToastViewport, pushToast } from "./Toast";
 import { SunIcon } from "./Icons";
 import { spawnRipple } from "./ripple";
+import { StageItemControl } from "./StageItemControl";
 
 const WS_PATH = "/ws";
 const MAX_ACTIVITY = 4;
@@ -95,6 +96,9 @@ export function Controller() {
         break;
       case "SAY":
       case "COMMAND":
+      case "WORLD_CHANGED":
+      case "ADD_STAGE_ITEM":
+      case "STAGE_ITEM_CHANGED":
       case "SPEECH_STARTED":
       case "SPEECH_ENDED":
         break;
@@ -179,6 +183,17 @@ export function Controller() {
     onManual({ type: "GREET" });
   }, [onManual]);
 
+  const onAddStageItem = useCallback(
+    (placement: StageItemPlacement) => {
+      if (!send({ type: "ADD_STAGE_ITEM", payload: { placement } })) {
+        pushToast({ title: "Pantalla desconectada", type: "error" });
+        return;
+      }
+      pushToast({ title: "Objeto agregado al escenario" });
+    },
+    [send],
+  );
+
   const stateLabel = paused ? "En pausa" : STATE_LABEL[robiState];
   const isSleeping = !paused && robiState === "SLEEPING";
 
@@ -234,6 +249,8 @@ export function Controller() {
         onCommand={onManual}
         disabled={!connected || paused}
       />
+
+      <StageItemControl onAdd={onAddStageItem} disabled={!connected} />
 
       {/* Actividad (with embedded Detener / Reiniciar) */}
       <ActivityLog

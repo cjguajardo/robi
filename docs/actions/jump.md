@@ -75,12 +75,13 @@ Sin `steps`, no hay clamp. Schema acepta el literal.
 | T | Event | Reducer | Sprite |
 |---|---|---|---|
 | 0 | `EXECUTE {command: JUMP}` | `EXECUTING`, `pendingMove = null` | `jumping` (track con `frameSequence`) |
+| audio_start | `SPEECH_STARTED` (sonido de esfuerzo, sin `SPEAK`) | `EXECUTING` (sin cambio) | `jumping` (sigue, nunca `speaking`) |
 | audio_end | `RETURN_TO_EXECUTION` (action) | `EXECUTING` | `jumping` (sigue) |
 | post-delay | `COMPLETE` | `IDLE` | `idle` |
 
 `actionAnimationMs(JUMP) = 700` ms.
 
-**Detalle clave**: la traslación VISUAL viene del CSS, no del reducer. Ver `Sprite track` abajo.
+**Detalle clave**: la traslación VISUAL viene del CSS, no del reducer. El MP3 de JUMP es un sonido de esfuerzo, no diálogo: `SPEECH_STARTED` mantiene `EXECUTING` para que el avatar no cambie al track `speaking`. Tanto el track de frames como `avatar-jump` se ejecutan exactamente una vez. Ver `Sprite track` abajo.
 
 ## Posición y dirección
 
@@ -115,7 +116,8 @@ jumping: {
   startCol: 0,
   frameCount: 3,
   duration: 0.7,
-  frameSequence: [0, 1, 1, 2, 2, 0]   // weighted cycle
+  loop: false,
+  frameSequence: [0, 1, 1, 2, 2, 0]   // weighted sequence
 }
 ```
 
@@ -128,7 +130,7 @@ jumping: {
 | 3 | 33 → 50% | 1 | **mid-air (HOLD)** |
 | 4 | 50 → 67% | 2 | apex |
 | 5 | 67 → 83% | 2 | **falling (HOLD)** |
-| 6 | 83 → 100% | 0 | landed (loop) |
+| 6 | 83 → 100% | 0 | landed |
 
 Esto emula la cadencia real de un salto: crouch → push → mid → apex → fall → land.
 
@@ -145,8 +147,10 @@ Esto emula la cadencia real de un salto: crouch → push → mid → apex → fa
 ## Edge cases
 
 - **JUMP durante JUMP**: el segundo se rechaza (`state.processing`). Cliente recibe `STOP`.
+- **Audio durante JUMP**: se reproduce normalmente y sigue enviando `SPEECH_STARTED`/`SPEECH_ENDED`, pero el servidor omite `SPEAK` solo para JUMP. Así el waiter de audio funciona sin mostrar la animación de hablar.
 - **Salto en celda de borde**: no hay verificación (open world).
 - **Visual no reinicia en multi-tap**: bug de `jumpKey`. Ver `Robi.tsx:79-82`.
+- **El track no queda en loop**: `SPRITE_TRACKS.jumping.loop = false`; el CSS generado usa una iteración con fill `both`.
 
 ## Diagnóstico de "ruido"
 
@@ -193,5 +197,6 @@ Esto emula la cadencia real de un salto: crouch → push → mid → apex → fa
   - "JUMP sets state EXECUTING with null pendingMove"
 - `src/lib/realtime/server.test.ts`:
   - "JUMP is in-place (no position change) and broadcasts EXECUTING → IDLE"
-  - "SPEECH_STARTED drives the state to SPEAKING"
-  - "SPEECH_ENDED drives action commands back to EXECUTING (action sprite)"
+  - "JUMP keeps the jumping state while its sound plays"
+  - "SPEECH_STARTED drives the state to SPEAKING" (otras acciones)
+  - "SPEECH_ENDED drives action commands back to EXECUTING (action sprite)" (otras acciones)

@@ -10,11 +10,13 @@ import type {
   RobiCommand,
   RobiState,
   SessionSnapshot,
+  StageItem as StageItemModel,
 } from "@/types/robi";
 import { BLOCK_PX, MS_PER_BLOCK } from "@/lib/robi/commands";
 import { RobiAvatar } from "./RobiAvatar";
 import { RobiSpeechBubble } from "./RobiSpeechBubble";
 import { RobiStatus } from "./RobiStatus";
+import { StageItem } from "./StageItem";
 
 const WS_PATH = "/ws";
 
@@ -43,6 +45,7 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
   const [speech, setSpeech] = useState<string | null>(null);
   /** Most recent COMMAND broadcast — informs sprite track selection. */
   const [lastCommand, setLastCommand] = useState<RobiCommand | null>(null);
+  const [stageItem, setStageItem] = useState<StageItemModel | null>(null);
   /**
    * Monotonic counter that increments every time a JUMP command is
    * observed. We pass this as a React `key` to RobiAvatar so the
@@ -74,6 +77,7 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
         setPosition(snap.position);
         setDirection(snap.direction);
         setPaused(snap.paused);
+        setStageItem(snap.stageItem);
         if (snap.lastCommand) setLastCommand(snap.lastCommand);
         break;
       }
@@ -100,6 +104,9 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
           setJumpKey((k) => k + 1);
         }
         break;
+      case "STAGE_ITEM_CHANGED":
+        setStageItem(event.payload);
+        break;
       case "SAY":
         // Speech bubble visible briefly while audio plays.
         setSpeech(event.payload.text);
@@ -111,6 +118,7 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
         setPosition({ x: 0, y: 0 });
         setDirection("SOUTH");
         setLastCommand(null);
+        setStageItem(null);
         break;
       case "PAUSE":
         setPaused(true);
@@ -120,6 +128,7 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
         setPaused(false);
         break;
       case "TRANSCRIPT":
+      case "ADD_STAGE_ITEM":
       case "SPEECH_STARTED":
       case "SPEECH_ENDED":
         break;
@@ -367,6 +376,13 @@ const transitionMs = useMemo<number>(() => {
       <div className="robi-sky"    style={skyStyle}    aria-hidden="true" />
       <div className="robi-scene-bg" style={sceneStyle} aria-hidden="true" />
       <div className="robi-floor"  style={floorStyle}  aria-hidden="true" />
+      {stageItem && (
+        <StageItem
+          item={stageItem}
+          robiPosition={position}
+          transitionMs={transitionMs}
+        />
+      )}
       <RobiAvatar state={state} command={lastCommand} direction={direction} jumpKey={jumpKey} />
       <RobiSpeechBubble text={speech} state={state} />
       {showStatus && (

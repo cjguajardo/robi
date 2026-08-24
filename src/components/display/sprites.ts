@@ -48,8 +48,10 @@ export interface SpriteTrack {
   startCol: number;
   /** Number of cells in the strip. */
   frameCount: number;
-  /** Loop duration in seconds (one full cycle). */
+  /** Animation duration in seconds (one full cycle). */
   duration: number;
+  /** Whether the track repeats. Defaults to true for ambient/action loops. */
+  loop?: boolean;
   /**
    * Optional weighted frame sequence. Defaults to evenly cycling
    * 0..frameCount-1. Custom sequences let a track hold (or skip)
@@ -101,7 +103,7 @@ export const SPRITE_TRACKS: Record<string, SpriteTrack> = {
   // the same cell for the segment duration → real-jump cadence.
   // Vertical lift comes from CSS `avatar-jump` translateY keyframes
   // (also 6-segment, aligned with the sprite cycle).
-  jumping:     { id: "jumping", row: 0, startCol: 0, frameCount: 3, duration: 0.7, frameSequence: [0, 1, 1, 2, 2, 0] },
+  jumping:     { id: "jumping", row: 0, startCol: 0, frameCount: 3, duration: 0.7, loop: false, frameSequence: [0, 1, 1, 2, 2, 0] },
 };
 
 // ---------------------------------------------------------------------------
@@ -351,7 +353,8 @@ export function generateAnimationRule(track: SpriteTrack): string {
   if (track.frameCount <= 1) {
     return `sprite-${track.id} 1s linear infinite`;
   }
-  return `sprite-${track.id} ${track.duration.toFixed(2)}s step-end infinite`;
+  const repetition = track.loop === false ? "1 both" : "infinite";
+  return `sprite-${track.id} ${track.duration.toFixed(2)}s step-end ${repetition}`;
 }
 
 /**

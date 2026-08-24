@@ -39,6 +39,21 @@ export interface Position {
   y: number;
 }
 
+/** Objects an operator can place on the projected stage. */
+export type StageItemKind = "STAR" | "BOX" | "BALL";
+
+/** Placement choices exposed by /control. */
+export type StageItemPlacement = "ABOVE" | "LEFT" | "RIGHT";
+
+/** One active target in world coordinates. A new target replaces it. */
+export interface StageItem {
+  kind: StageItemKind;
+  placement: StageItemPlacement;
+  position: Position;
+  /** Horizontal distance chosen at creation; zero for ABOVE. */
+  distanceSteps: number;
+}
+
 /** Minimal state set — see DESIGN.md §11. */
 export type RobiState =
   | "SLEEPING"
@@ -82,6 +97,10 @@ export interface SayPayload {
 /** Realtime wire format — see DESIGN.md §14. */
 export type RealtimeEvent =
   | { type: "COMMAND"; payload: RobiCommand }
+  // Client request: choose the location; the server randomizes the
+  // object and side distance so every connected peer sees one result.
+  | { type: "ADD_STAGE_ITEM"; payload: { placement: StageItemPlacement } }
+  | { type: "STAGE_ITEM_CHANGED"; payload: StageItem | null }
   | { type: "STATE_CHANGED"; payload: RobiState }
   // World sync — broadcast after each EXECUTE so the /display can
   // render the new (position, direction). STATE_CHANGED only carries
@@ -105,6 +124,7 @@ export interface SessionSnapshot {
   lastTranscript: string;
   lastCommand: RobiCommand | null;
   paused: boolean;
+  stageItem: StageItem | null;
 }
 
 /** Configuration knobs — see DESIGN.md §32. */

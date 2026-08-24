@@ -6,6 +6,7 @@ import {
   attachPeer,
   detachPeer,
   ingestCommand,
+  ingestStageItemRequest,
   ingestSpeechEvent,
   ingestWorldEvent,
   readSnapshot,
@@ -65,6 +66,87 @@ describe("realtime hub", () => {
     expect(events.some((e) => e.type === "SNAPSHOT")).toBe(true);
     expect(snap.state).toBe("SLEEPING");
     detachPeer(handle);
+  });
+
+  it("creates one shared random stage item from the selected placement", () => {
+    const { events, handle } = makePeer();
+    attachPeer(handle);
+    events.length = 0;
+
+    const item = ingestStageItemRequest("LEFT", () => 0);
+
+    expect(item).toEqual({
+      kind: "STAR",
+      placement: "LEFT",
+      position: { x: -5, y: 0 },
+      distanceSteps: 5,
+    });
+    expect(readSnapshot().stageItem).toEqual(item);
+    expect(events).toContainEqual({
+      type: "STAGE_ITEM_CHANGED",
+      payload: item,
+    });
+    detachPeer(handle);
+  });
+
+  it("rejects an invalid stage placement without changing the snapshot", () => {
+    expect(ingestStageItemRequest("CENTER")).toBeNull();
+    expect(readSnapshot().stageItem).toBeNull();
+  });
+
+  it("removes an above object when JUMP reaches its visual apex", async () => {
+    vi.useFakeTimers();
+    try {
+      const { events, handle } = makePeer();
+      attachPeer(handle);
+      ingestStageItemRequest("ABOVE", () => 0);
+      events.length = 0;
+
+      ingestCommand({ type: "JUMP" });
+      await vi.advanceTimersByTimeAsync(349);
+      expect(readSnapshot().stageItem).not.toBeNull();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(readSnapshot().stageItem).toBeNull();
+      expect(events).toContainEqual({
+        type: "STAGE_ITEM_CHANGED",
+        payload: null,
+      });
+      detachPeer(handle);
+    } finally {
+      _resetForTesting();
+      vi.useRealTimers();
+    }
+  });
+
+  it("removes a side object only when the walking transition reaches it", async () => {
+    vi.useFakeTimers();
+    try {
+      const { events, handle } = makePeer();
+      attachPeer(handle);
+      ingestStageItemRequest("RIGHT", () => 0);
+      events.length = 0;
+
+      ingestCommand({ type: "WALK_RIGHT", steps: 5 });
+      ingestSpeechEvent("SPEECH_STARTED");
+      ingestSpeechEvent("SPEECH_ENDED");
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(readSnapshot().position).toEqual({ x: 5, y: 0 });
+      await vi.advanceTimersByTimeAsync(1749);
+      expect(readSnapshot().stageItem).not.toBeNull();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(readSnapshot().stageItem).toBeNull();
+      expect(events).toContainEqual({
+        type: "STAGE_ITEM_CHANGED",
+        payload: null,
+      });
+      detachPeer(handle);
+    } finally {
+      _resetForTesting();
+      vi.useRealTimers();
+    }
   });
 
   it("ingestCommand validates, queues, and broadcasts EXECUTING then IDLE", async () => {
@@ -426,12 +508,43 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
     events.length = 0;
 
     // Land in EXECUTING first (manual command).
-    ingestCommand({ type: "JUMP" });
+    ingestCommand({ type: "DANCE" });
     ingestSpeechEvent("SPEECH_STARTED");
 
     expect(events.some(
       (e) => e.type === "STATE_CHANGED" && e.payload === "SPEAKING",
     )).toBe(true);
+    detachPeer(handle);
+  });
+
+  it("JUMP keeps the jumping state while its sound plays", () => {
+    const { events, handle } = makePeer();
+    attachPeer(handle);
+    events.length = 0;
+
+    ingestCommand({ type: "JUMP" });
+
+    const commandIndex = events.findIndex(
+      (event) => event.type === "COMMAND" && event.payload.type === "JUMP",
+    );
+    const sayIndex = events.findIndex(
+      (event) =>
+        event.type === "SAY" &&
+        event.payload.audioUrl?.startsWith("/audio/jump-") === true,
+    );
+    expect(commandIndex).toBeGreaterThanOrEqual(0);
+    expect(sayIndex).toBeGreaterThan(commandIndex);
+
+    events.length = 0;
+    ingestSpeechEvent("SPEECH_STARTED");
+
+    expect(readSnapshot().state).toBe("EXECUTING");
+    expect(events.some(
+      (event) => event.type === "STATE_CHANGED" && event.payload === "SPEAKING",
+    )).toBe(false);
+
+    ingestSpeechEvent("SPEECH_ENDED");
+    expect(readSnapshot().state).toBe("EXECUTING");
     detachPeer(handle);
   });
 
@@ -467,7 +580,7 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
   });
 
   it("SPEECH_ENDED drives action commands back to EXECUTING (action sprite)", () => {
-    // Companion to the THINKING test. Action commands (WALK, JUMP,
+    // Companion to the THINKING test. Speaking action commands (WALK,
     // DANCE, etc.) revert to EXECUTING on SPEECH_ENDED so the
     // command-aware sprite (walking / dancing / celebrating) plays
     // out until drainQueue's post-audio delay completes.
@@ -475,7 +588,7 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
     attachPeer(handle);
     events.length = 0;
 
-    ingestCommand({ type: "JUMP" });
+    ingestCommand({ type: "DANCE" });
     ingestSpeechEvent("SPEECH_STARTED");
     events.length = 0;
     ingestSpeechEvent("SPEECH_ENDED");

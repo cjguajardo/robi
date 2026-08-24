@@ -716,6 +716,71 @@ body::before {
 
 .quick-actions .pill .ic-wrap { width: 18px; height: 18px; opacity: 0.95; }
 
+/* ===== Stage object placement — one tap chooses the spawn side ===== */
+.stage-item-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 12px;
+}
+
+.stage-item-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.stage-item-copy strong {
+  color: var(--r-fg);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.stage-item-copy span {
+  color: var(--r-fg-dim);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.stage-position-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  gap: 5px;
+}
+
+.stage-position-button {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(0, 212, 255, 0.38);
+  border-radius: 11px;
+  background: rgba(0, 212, 255, 0.11);
+  color: var(--r-fg);
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 90ms ease-out, background 150ms ease-out;
+}
+
+.stage-position-button:hover { background: rgba(0, 212, 255, 0.2); }
+.stage-position-button:active { transform: scale(0.92); }
+.stage-position-button:focus-visible {
+  outline: 3px solid var(--r-accent);
+  outline-offset: 2px;
+}
+.stage-position-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+.stage-position-button[data-sent] { animation: pill-sent 600ms ease-out; }
+
 /* ===== Ripple ===== */
 .ripple {
   position: absolute;
