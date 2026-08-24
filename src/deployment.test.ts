@@ -40,4 +40,12 @@ describe("production container", () => {
     expect(dockerignore).toMatch(/^node_modules$/m);
     expect(dockerignore).toMatch(/^dist$/m);
   });
+
+  it("uses injected environment variables when no local .env file exists", () => {
+    const server = rootFile("server.mjs");
+
+    expect(server).not.toContain("loadEnvFile");
+    expect(server).toMatch(/process\.env\.PORT \?\? 4321/);
+    expect(server).toMatch(/process\.env\.HOST \?\? "0\.0\.0\.0"/);
+  });
 });

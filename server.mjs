@@ -3,13 +3,6 @@
 //   pnpm build          # outputs dist/server/entry.mjs + dist/client/*
 //   pnpm start          # runs this file (via tsx)
 
-// Load .env into process.env BEFORE any module reads process.env.X.
-// Astro/Vite does this automatically in dev/build; raw `tsx` does not.
-// process.loadEnvFile() is built into Node ≥20.12 (you're on 24), so no
-// dotenv dep needed. The `?.` keeps it safe if the file is absent
-// (e.g. production env vars come from the OS / orchestrator directly).
-process.loadEnvFile?.();
-
 import { createServer } from "node:http";
 import { createReadStream, statSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
