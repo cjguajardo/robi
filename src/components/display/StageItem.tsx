@@ -22,15 +22,26 @@ export function StageItem({ item, robiPosition, transitionMs }: Props) {
   } as CSSProperties;
   const kindClass = item.kind.toLowerCase();
   const anchorClass = item.placement === "ABOVE" ? "stage-item-above" : "stage-item-side";
+  const sideClass = item.placement === "ABOVE" ? "" : `stage-item-${item.placement.toLowerCase()}`;
+  const accessibleLabel =
+    item.placement === "ABOVE"
+      ? `${LABEL[item.kind]} arriba de ROBI`
+      : `${LABEL[item.kind]} a la ${item.placement === "LEFT" ? "izquierda" : "derecha"}, ${item.distanceSteps} pasos`;
+  const hint = `${item.distanceSteps} pasos`;
 
   return (
     <div
-      className={`stage-item stage-item-${kindClass} ${anchorClass}`}
+      className={["stage-item", `stage-item-${kindClass}`, anchorClass, sideClass]
+        .filter(Boolean)
+        .join(" ")}
       style={style}
       role="img"
-      aria-label={LABEL[item.kind]}
+      aria-label={accessibleLabel}
     >
       <ItemGraphic kind={item.kind} />
+      {item.placement !== "ABOVE" && (
+        <span className="stage-item-hint">{hint}</span>
+      )}
     </div>
   );
 }

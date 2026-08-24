@@ -3,8 +3,9 @@
 // Designed for short, kid-friendly Spanish phrases.
 
 import type { RobiCommand } from "@/types/robi";
+import { FALLBACK_CONFIG } from "./commands";
 
-/** Spanish number words up to 9 (PRD §8 caps at MAX_STEPS=5). */
+/** Spanish number words through the configured 10-step classroom cap. */
 const NUMBER_WORDS: Record<string, number> = {
   cero: 0,
   un: 1,
@@ -18,6 +19,7 @@ const NUMBER_WORDS: Record<string, number> = {
   siete: 7,
   ocho: 8,
   nueve: 9,
+  diez: 10,
 };
 
 /** Try to extract a step count from the transcript, otherwise return default. */
@@ -140,7 +142,10 @@ export function parseCommand(
         pattern.cmd === "WALK_LEFT" ||
         pattern.cmd === "WALK_RIGHT"
       ) {
-        const steps = extractSteps(text, options.defaultSteps ?? 1);
+        const steps = extractSteps(
+          text,
+          options.defaultSteps ?? FALLBACK_CONFIG.defaultSteps,
+        );
         switch (pattern.cmd) {
           case "WALK_LEFT":
             return { type: "WALK_LEFT", steps };

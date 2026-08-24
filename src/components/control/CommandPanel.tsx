@@ -4,7 +4,7 @@
 //
 // Dpad semantics: arrows are kid-game controls.
 // Up = jump one block forward (always 1, the picker doesn't apply).
-// Left/Right = walk sideways `steps` blocks (picker applies, UI default 3).
+// Left/Right = walk sideways `steps` blocks (picker applies, UI default 5).
 // Down = stop. In-place rotation was removed — there's no button or
 // voice command for it anymore.
 

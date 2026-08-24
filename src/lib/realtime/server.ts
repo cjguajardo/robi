@@ -175,6 +175,47 @@ async function drainQueue(): Promise<void> {
     },
   });
 
+  // Walking begins in the same command turn as its SAY. EXECUTE first
+  // broadcasts the new direction with the current position, then this
+  // APPLY_MOVEMENT broadcasts the destination immediately. The display
+  // receives COMMAND/EXECUTING before the destination, so its walk sprite
+  // and world transition start together with "¡A la izquierda/derecha!"
+  // instead of waiting for SPEECH_ENDED.
+  const visualDelayMs = actionAnimationMs(next);
+  let walkVisualCompletion: Promise<void> | null = null;
+  if (
+    (next.type === "WALK_LEFT" || next.type === "WALK_RIGHT") &&
+    state.world.pendingMove
+  ) {
+    const from = state.world.position;
+    const target = state.stageItem;
+    transition({ type: "APPLY_MOVEMENT" });
+
+    const visualTasks: Promise<unknown>[] = [sleep(visualDelayMs)];
+    if (target) {
+      const progress = collisionProgress(
+        target,
+        from,
+        state.world.position,
+        next,
+      );
+      if (progress !== null) {
+        visualTasks.push(
+          removeStageItemAfter(target, visualDelayMs * progress),
+        );
+      }
+    }
+
+    broadcast({
+      type: "WORLD_CHANGED",
+      payload: {
+        position: state.world.position,
+        direction: state.world.direction,
+      },
+    });
+    walkVisualCompletion = Promise.all(visualTasks).then(() => undefined);
+  }
+
   // JUMP has no world translation: its contact point is the CSS
   // animation apex, halfway through the 700ms hop that starts as soon
   // as COMMAND reaches /display. Schedule this independently from the
@@ -311,46 +352,16 @@ async function drainQueue(): Promise<void> {
     await waiter;
   }
 
-  // Apply the deferred position translation NOW that audio has
-  // ended. The kid saw ROBI say the cue "in place" — now the avatar
-  // actually moves, and the CSS animation ties the visual translation
-  // to this exact moment. Idempotent for commands without a pending
-  // move (DANCE/CELEBRATE/etc.) — APPLY_MOVEMENT is a no-op when
-  // `pendingMove` is null.
-  let walkCollision:
-    | { item: StageItem; progress: number }
-    | null = null;
-  if (state.world.pendingMove) {
-    const from = state.world.position;
-    const target = state.stageItem;
-    transition({ type: "APPLY_MOVEMENT" });
-    if (target) {
-      const progress = collisionProgress(target, from, state.world.position, next);
-      if (progress !== null) walkCollision = { item: target, progress };
-    }
-    broadcast({
-      type: "WORLD_CHANGED",
-      payload: {
-        position: state.world.position,
-        direction: state.world.direction,
-      },
-    });
-  }
-
-  state.processing = false;
-  // For action commands, give the visible animation time to play out
-  // before the state moves to IDLE. drainQueue already waited for
-  // SPEECH_ENDED via `waitForSpeechEnded` (audio ended); this just
-  // adds the visual-action duration on top of the audio duration.
-  const visualDelayMs = actionAnimationMs(next);
-  if (walkCollision && visualDelayMs > 0) {
-    const collisionDelayMs = visualDelayMs * walkCollision.progress;
-    await removeStageItemAfter(walkCollision.item, collisionDelayMs);
-    const remainingDelayMs = visualDelayMs - collisionDelayMs;
-    if (remainingDelayMs > 0) await sleep(remainingDelayMs);
+  // Walking visual time started before the SAY and therefore overlaps
+  // audio playback. If speech is shorter, wait only for the remaining
+  // movement; if speech is longer, the visual promise is already done.
+  // Other action tracks keep their existing post-audio hold behavior.
+  if (walkVisualCompletion) {
+    await walkVisualCompletion;
   } else if (visualDelayMs > 0) {
     await sleep(visualDelayMs);
   }
+  state.processing = false;
   transition({ type: "COMPLETE" });
 
   if (state.queue.length > 0) {
@@ -662,7 +673,8 @@ function waitForSpeechEnded(expectedDurationMs?: number): Promise<void> {
  *   - ACTION command (WALK / JUMP / DANCE / CELEBRATE / GREET /
  *     SAY_GOODBYE): revert to EXECUTING so the command-aware sprite
  *     (walking / dancing / waving / etc.) plays out visibly until
- *     drainQueue's post-audio delay then COMPLETE.
+ *     its visual track and audio lifecycle are both complete. WALK
+ *     overlaps those tracks; the other actions retain a post-audio hold.
  *   - CONTENT command (TELL_JOKE / TELL_RIDDLE / TELL_FACT /
  *     ANSWER_QUESTION / UNKNOWN): go straight to COMPLETE → IDLE.
  *     Earlier revisions bounced through THINKING here, but the

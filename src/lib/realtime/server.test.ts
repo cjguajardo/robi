@@ -40,10 +40,9 @@ function makePeer() {
  * delay (simulating audio playback), then SPEECH_ENDED. Lets the test
  * move on without waiting the production 8s safety timer.
  *
- * Also waits long enough for action commands (WALK/JUMP/DANCE/CELEBRATE)
- * to clear their post-audio `actionAnimationMs` delay so the next
- * STATE_CHANGED reaches IDLE. ~900ms covers the longest action in tests
- * (JUMP=700ms + drain overhead).
+ * Also waits long enough for action commands to reach IDLE. WALK visual
+ * time overlaps audio; the other action tracks retain their post-audio
+ * hold. ~900ms covers the longest action used by this helper.
  */
 async function completeAudio(): Promise<void> {
   ingestSpeechEvent("SPEECH_STARTED");
@@ -128,11 +127,8 @@ describe("realtime hub", () => {
       events.length = 0;
 
       ingestCommand({ type: "WALK_RIGHT", steps: 5 });
-      ingestSpeechEvent("SPEECH_STARTED");
-      ingestSpeechEvent("SPEECH_ENDED");
-      await vi.advanceTimersByTimeAsync(0);
-
       expect(readSnapshot().position).toEqual({ x: 5, y: 0 });
+      expect(events.some((event) => event.type === "SAY")).toBe(true);
       await vi.advanceTimersByTimeAsync(1749);
       expect(readSnapshot().stageItem).not.toBeNull();
 
@@ -284,7 +280,7 @@ describe("realtime hub", () => {
     expect(states).not.toContain("CONFUSED");
     const say = events.find((e) => e.type === "SAY");
     expect(say).toBeDefined();
-    // JUMP has no pendingMove, so the post-audio APPLY_MOVEMENT never
+    // JUMP has no pendingMove, so APPLY_MOVEMENT never
     // fires — only the initial EXECUTE-time WORLD_CHANGED is broadcast,
     // and it carries the SAME position (unchanged) and same direction
     // (JUMP doesn't rotate).
@@ -296,69 +292,55 @@ describe("realtime hub", () => {
     detachPeer(handle);
   });
 
-  it("WALK_LEFT rotates ROBI to WEST and queues translation as pendingMove (no eager position change)", () => {
-    // The kid sees ROBI turn west and say "¡A la izquierda!" in place.
-    // The actual translation is dispatched AFTER audio ends, not here.
+  it("WALK_LEFT starts translating while ROBI says the direction", () => {
     const { events, handle } = makePeer();
     attachPeer(handle);
     events.length = 0;
     ingestCommand({ type: "WALK_LEFT", steps: 1 });
     const snap = readSnapshot();
     expect(snap.direction).toBe("WEST");
-    expect(snap.position).toEqual({ x: 0, y: 0 }); // NOT moved yet
+    expect(snap.position).toEqual({ x: -1, y: 0 });
+    expect(events.some((event) => event.type === "SAY")).toBe(true);
     detachPeer(handle);
   });
 
-  it("multi-step WALK_RIGHT queues the full translation in pendingMove", () => {
+  it("multi-step WALK_RIGHT starts the full visual translation immediately", () => {
     const { handle } = makePeer();
     attachPeer(handle);
     ingestCommand({ type: "WALK_RIGHT", steps: 3 });
     const snap = readSnapshot();
-    expect(snap.position).toEqual({ x: 0, y: 0 }); // NOT moved yet
+    expect(snap.position).toEqual({ x: 3, y: 0 });
     expect(snap.direction).toBe("EAST");
     detachPeer(handle);
   });
 
-  it("WORLD_CHANGED broadcasts the new direction immediately, position unchanged (deferred)", async () => {
-    // First WORLD_CHANGED arrives right after EXECUTE — direction is
-    // already updated (ROBI faces the new heading) but position is
-    // still the OLD value (translation is deferred until audio ends).
+  it("WORLD_CHANGED broadcasts direction and destination before audio ends", () => {
     const { events, handle } = makePeer();
     attachPeer(handle);
     events.length = 0;
     ingestCommand({ type: "WALK_RIGHT", steps: 2 });
-    const worldChanged = events.find((e) => e.type === "WORLD_CHANGED");
-    expect(worldChanged).toBeDefined();
-    if (worldChanged && worldChanged.type === "WORLD_CHANGED") {
-      expect(worldChanged.payload.position).toEqual({ x: 0, y: 0 });
-      expect(worldChanged.payload.direction).toBe("EAST");
+    const worldChanges = events.filter((event) => event.type === "WORLD_CHANGED");
+    expect(worldChanges).toHaveLength(2);
+    const destination = worldChanges[1];
+    if (destination?.type === "WORLD_CHANGED") {
+      expect(destination.payload.position).toEqual({ x: 2, y: 0 });
+      expect(destination.payload.direction).toBe("EAST");
     }
     detachPeer(handle);
   });
 
-  it("WORLD_CHANGED broadcasts the new position a SECOND time, AFTER audio ends", async () => {
-    // The second WORLD_CHANGED arrives AFTER drainQueue dispatches
-    // APPLY_MOVEMENT (post-audio). Now position reflects the actual
-    // translation the kid visibly watched happen.
+  it("does not defer an additional position update until after audio", async () => {
     const { events, handle } = makePeer();
     attachPeer(handle);
     events.length = 0;
     ingestCommand({ type: "WALK_LEFT", steps: 1 });
+    const beforeAudioEnds = events.filter((event) => event.type === "WORLD_CHANGED");
+    expect(beforeAudioEnds).toHaveLength(2);
+    expect(readSnapshot().position).toEqual({ x: -1, y: 0 });
+
     await completeAudio();
     const worldChanges = events.filter((e) => e.type === "WORLD_CHANGED");
-    expect(worldChanges.length).toBe(2);
-    // First (immediate): position unchanged, direction updated.
-    const first = worldChanges[0];
-    if (first && first.type === "WORLD_CHANGED") {
-      expect(first.payload.position).toEqual({ x: 0, y: 0 });
-      expect(first.payload.direction).toBe("WEST");
-    }
-    // Second (post-audio): position changes, direction unchanged.
-    const second = worldChanges[1];
-    if (second && second.type === "WORLD_CHANGED") {
-      expect(second.payload.position).toEqual({ x: -1, y: 0 });
-      expect(second.payload.direction).toBe("WEST");
-    }
+    expect(worldChanges).toHaveLength(2);
     detachPeer(handle);
   });
 
@@ -641,26 +623,24 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
     detachPeer(handle);
   });
 
-  it("SPEECH_ENDED unblocks drainQueue, releasing the queue lock", async () => {
+  it("releases the queue lock after speech and concurrent walking finish", async () => {
     const { handle } = makePeer();
     attachPeer(handle);
     ingestCommand({ type: "WALK_LEFT", steps: 1 });
     // Should be locked (state.processing === true).
     const { ingestCommand: ic, readSnapshot } = await import("./server");
-    // We can fire a second command — it'll queue. Snapshot state.
-    ic({ type: "WALK_RIGHT", steps: 1 });
+    // A second command is rejected while the first command is active.
+    expect(ic({ type: "WALK_RIGHT", steps: 1 }).type).toBe("STOP");
     const snap = readSnapshot();
     expect(snap.lastCommand?.type).toBeDefined();
     // Now manually complete the audio for the FIRST command.
     ingestSpeechEvent("SPEECH_STARTED");
     await new Promise((r) => setTimeout(r, 20));
     ingestSpeechEvent("SPEECH_ENDED");
-    await new Promise((r) => setTimeout(r, 50));
-    // After audio ended, processing should be false. The queued
-    // WALK_RIGHT should now run.
-    await new Promise((r) => setTimeout(r, 80));
-    // After both commands completed, state.processing should be false
-    // and the queue empty. Use a fresh command as a probe.
+    // One step has a 400ms visual duration that started with the SAY.
+    // Audio ended after ~20ms, so wait for the remaining walk time.
+    await new Promise((r) => setTimeout(r, 430));
+    // Both concurrent tracks have completed; use a fresh command as a probe.
     const probe = ingestCommand({ type: "JUMP" });
     expect(probe.type).toBe("JUMP");  // accepted (not paused, not processing)
     detachPeer(handle);

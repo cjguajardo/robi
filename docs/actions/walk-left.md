@@ -1,10 +1,10 @@
 # WALK_LEFT
 
-Caminar a la izquierda: rota el avatar a WEST y (después del audio) lo desplaza `-steps` bloques en X.
+Caminar a la izquierda: rota el avatar a WEST, reproduce el audio y lo desplaza `-steps` bloques en X al mismo tiempo.
 
 ## TL;DR
 
-Comando de movimiento lateral izquierdo; direction WEST inmediata, position deferred hasta `APPLY_MOVEMENT` post-audio.
+Comando lateral izquierdo; dirección, audio, sprite y desplazamiento comienzan juntos.
 
 ## Flowchart
 
@@ -18,7 +18,8 @@ flowchart LR
         WAIT["waitForSpeechEnded"]
         APPLY["APPLY_MOVEMENT → position.x -= steps"]
         COMP["COMPLETE → IDLE"]
-        EXEC --> BR --> WAIT --> APPLY --> COMP
+        EXEC --> APPLY --> COMP
+        EXEC --> BR --> WAIT --> COMP
     end
 
     SVR -->|SAY + WORLD_CHANGED ×2| DISP
@@ -34,7 +35,7 @@ flowchart LR
     END -.->|resolves| WAIT
 ```
 
-**Leyenda**: 🟦 server node · 🟩 display node. Secuencia lineal (sin paralelismo en este comando). `APPLY_MOVEMENT` se ejecuta DESPUÉS de `SPEECH_ENDED` por eso el position update es deferred.
+**Leyenda**: 🟦 server node · 🟩 display node. Audio y desplazamiento se ejecutan en paralelo; `COMPLETE` espera que ambos terminen.
 
 ## Forma
 
@@ -42,7 +43,7 @@ flowchart LR
 { type: "WALK_LEFT"; steps: number }
 ```
 
-`steps`: entero en `[1, 5]`. Ver [references.md §6 Configuración](../references.md#6-configuracion).
+`steps`: entero en `[1, 10]`. Ver [references.md §6 Configuración](../references.md#6-configuracion).
 
 ## Disparador
 
@@ -58,19 +59,19 @@ flowchart LR
 
 ### LLM fallback
 
-`src/lib/llm/system-prompt.ts` puede devolver `WALK_LEFT` cuando el parser local devuelve `UNKNOWN`. Schema: `{type: "WALK_LEFT", steps: 1-5}`. Model: `gpt-4o-mini`.
+`src/lib/llm/system-prompt.ts` puede devolver `WALK_LEFT` cuando el parser local devuelve `UNKNOWN`. Schema: `{type: "WALK_LEFT", steps: 1-10}`. Model: `gpt-4o-mini`.
 
 ### Validación
 
-`src/lib/robi/validator.ts` — `clamp(steps, 1, 5)`. Inputs fuera de rango se clampean. Si steps ≤ 0 → 1.
+`src/lib/robi/validator.ts` — `clamp(steps, 1, 10)`. Inputs fuera de rango se clampean. Si steps ≤ 0 → 1.
 
 ### `extractSteps()` (`parser.ts:24-33`)
 
 1. Busca `\b(\d{1,2})\b` → número entero.
-2. Si no, busca palabras (`uno/un/una`=1, `dos`=2, …, `nueve`=9).
-3. Si nada matchea → `defaultSteps` (= 1).
+2. Si no, busca palabras (`uno/un/una`=1, `dos`=2, …, `diez`=10).
+3. Si nada matchea → `defaultSteps` (= 5).
 
-Si la frase dice "diez pasos" → `clamp(10, 1, 5)` = 5 (no se permite caminar 10).
+Si la frase dice "diez pasos" → `clamp(10, 1, 10)` = 10.
 
 ## Audio
 
@@ -85,9 +86,8 @@ Si la frase dice "diez pasos" → `clamp(10, 1, 5)` = 5 (no se permite caminar 1
 | T | Event | Reducer | Sprite |
 |---|---|---|---|
 | 0 | `EXECUTE {command: WALK_LEFT, steps}` | `EXECUTING`, `direction = WEST`, `pendingMove = {x: -steps, y: 0}` | `walking` (track) |
-| audio_end | `RETURN_TO_EXECUTION` (action) | `EXECUTING` (sin cambio) | `walking` |
-| audio_end | `APPLY_MOVEMENT` | `EXECUTING`, `position.x -= steps` | `walking` |
-| post-delay | `COMPLETE` | `IDLE` | `idle` |
+| 0 | `APPLY_MOVEMENT` + `SAY` | `EXECUTING`, `position.x -= steps` | `walking` + audio |
+| max(audio, move) | `COMPLETE` | `IDLE` | `idle` |
 
 `actionAnimationMs(WALK_LEFT) = max(400, steps * 350)` ms.
 
@@ -97,13 +97,13 @@ Si la frase dice "diez pasos" → `clamp(10, 1, 5)` = 5 (no se permite caminar 1
 Cambia **INMEDIATAMENTE** en EXECUTE. Avatar se voltea a WEST antes de que termine el audio.
 
 ### Posición
-Cambia **DIFERIDO**. Vectorizado en `pendingMove = {x: -steps, y: 0}`. Aplicado en `APPLY_MOVEMENT` post-audio.
+Cambia **INMEDIATAMENTE DESPUÉS DE EXECUTE**, en el mismo turno. `pendingMove = {x: -steps, y: 0}` se aplica antes de esperar `SPEECH_ENDED`.
 
-**Por qué diferido**: el niño ve a ROBI decir "¡A la izquierda!" en el lugar, y LUEGO camina. Esto sincroniza el cue auditivo con la animación visible.
+Así el niño escucha "¡A la izquierda!" mientras ROBI ya está caminando hacia el destino.
 
 ### WORLD_CHANGED
 
-Se broadcastea **dos veces** por comando:
+Se broadcastea **dos veces seguidas**, antes de que termine el audio:
 1. Post-EXECUTE (dirección nueva, position vieja).
 2. Post-APPLY_MOVEMENT (dirección sin cambio, position nueva).
 
@@ -115,15 +115,12 @@ Entra al branch genérico (línea ~246):
 
 ```ts
 const phrase = responseForWithAudio(next);   // { text, audioUrl: '/audio/walk-left-01.mp3' }
-const waiter = waitForSpeechEnded();
-broadcast({ type: "SAY", payload: phrase }); // emit
-await waiter;                                 // gate
-if (state.world.pendingMove) {
-  transition({ type: "APPLY_MOVEMENT" });
-  broadcast({ type: "WORLD_CHANGED", payload: { position, direction } });
-}
-state.processing = false;
-await sleep(actionAnimationMs(next));         // visual delay
+transition({ type: "APPLY_MOVEMENT" });
+broadcast({ type: "WORLD_CHANGED", payload: { position, direction } });
+const movement = sleep(actionAnimationMs(next));
+const audio = waitForSpeechEnded();
+broadcast({ type: "SAY", payload: phrase });
+await Promise.all([movement, audio]);
 transition({ type: "COMPLETE" });
 ```
 
@@ -150,9 +147,9 @@ Si WALK_LEFT se comporta raro:
 |---|---|
 | Avatar camina hacia el lado equivocado | `src/lib/robi/reducer.ts:136-143` (case `WALK_LEFT`) — verifica que `direction: "WEST"` y `pendingMove.x = -steps`. También `src/components/display/sprites.ts:138` (DIRECTION_TRANSFORM.WEST). |
 | La direction cambia pero la posición no | El display no está viendo el segundo `WORLD_CHANGED`. Verificar que `pendingMove` no se dropeó. Ver `src/lib/realtime/server.ts:268-277`. |
-| Avatar camina antes de terminar el audio | Bug en `drainQueue` — el `APPLY_MOVEMENT` se está moviendo antes del `await waiter`. NO debería pasar, pero verificar el orden. |
+| Avatar anima pero no avanza mientras habla | `APPLY_MOVEMENT` quedó después de `await waiter`; debe emitirse antes para solapar voz y desplazamiento. |
 | El visual delay es demasiado corto/largo | `src/lib/realtime/server.ts:actionAnimationMs()` — ajustar la fórmula `steps * 350`. |
-| Steps > 5 aceptado | Validator: `src/lib/robi/validator.ts`. Schema no clampea correctamente. |
+| Steps > 10 aceptado | Validator: `src/lib/robi/validator.ts`. Schema no clampea correctamente. |
 | Audio no suena | `public/audio/walk-left-01.mp3` no existe, o audios:install no se corrió. Ver `pnpm audios:install`. |
 
 ## Puntos de tweak
@@ -160,7 +157,7 @@ Si WALK_LEFT se comporta raro:
 | Querés cambiar... | Archivo:línea | Notas |
 |---|---|---|
 | Velocidad de la animación visible | `src/lib/realtime/server.ts:actionAnimationMs()` → fórmula `Math.max(400, steps * 350)` | Constante 350ms por step; mínimo 400ms (1 step). |
-| Cap de steps (1-5) | `src/lib/robi/config.server.ts` → `maxSteps` | Cambia acá, no hardcodear. |
+| Cap de steps (1-10) | `src/lib/robi/config.server.ts` → `maxSteps` | Cambia acá, no hardcodear. |
 | Steps default | `src/lib/robi/config.server.ts` → `defaultSteps` | Si la frase no menciona número. |
 | Texto que dice | `sonidos/audios.json` (cambiar `text`) + regenerar con `pnpm audios` | El text en el código viene del catálogo cargado. |
 | Audio URL | `sonidos/audios/walk-left-NN.mp3` + `pnpm audios:install` | Regenerar y copiar a `public/audio/`. |
@@ -185,7 +182,7 @@ Si WALK_LEFT se comporta raro:
 ## Tests
 
 - `src/lib/robi/parser.test.ts`:
-  - "parses 'robi camina a la izquierda' → WALK_LEFT 1"
+  - "parses 'robi camina a la izquierda' → WALK_LEFT 5"
   - "extracts steps from digit words"
   - "rejects turn phrases (gira a la izquierda → UNKNOWN)"
 - `src/lib/robi/reducer.test.ts`:
@@ -193,8 +190,8 @@ Si WALK_LEFT se comporta raro:
   - "APPLY_MOVEMENT shifts position by pendingMove"
 - `src/lib/realtime/server.test.ts`:
   - "ingestCommand validates, queues, and broadcasts EXECUTING then IDLE" (con WALK_LEFT 1)
-  - "WORLD_CHANGED broadcasts the new direction immediately, position unchanged (deferred)"
-  - "WORLD_CHANGED broadcasts the new position a SECOND time, AFTER audio ends"
-  - "WALK_LEFT rotates ROBI to WEST and queues translation as pendingMove (no eager position change)"
-  - "SPEECH_ENDED unblocks drainQueue, releasing the queue lock"
+  - "WORLD_CHANGED broadcasts direction and destination before audio ends"
+  - "does not defer an additional position update until after audio"
+  - "WALK_LEFT starts translating while ROBI says the direction"
+  - "releases the queue lock after speech and concurrent walking finish"
   - "safety timer kicks in if SPEECH_ENDED never arrives"

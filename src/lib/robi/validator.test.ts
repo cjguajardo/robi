@@ -3,6 +3,10 @@ import { validateCommand } from "./validator";
 import { FALLBACK_CONFIG } from "./commands";
 
 describe("validator", () => {
+  it("uses the classroom movement defaults", () => {
+    expect(FALLBACK_CONFIG).toMatchObject({ defaultSteps: 5, maxSteps: 10 });
+  });
+
   it("clamps WALK_LEFT steps to maxSteps (PRD RF-008)", () => {
     expect(validateCommand({ type: "WALK_LEFT", steps: 99 }, FALLBACK_CONFIG)).toEqual({
       ok: true,

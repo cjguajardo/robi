@@ -11,6 +11,7 @@ import { ToastViewport, pushToast } from "./Toast";
 import { SunIcon } from "./Icons";
 import { spawnRipple } from "./ripple";
 import { StageItemControl } from "./StageItemControl";
+import { FALLBACK_CONFIG } from "@/lib/robi/commands";
 
 const WS_PATH = "/ws";
 const MAX_ACTIVITY = 4;
@@ -51,7 +52,7 @@ export function Controller() {
   const [connected, setConnected] = useState(false);
   const [robiState, setRobiState] = useState<RobiState>("SLEEPING");
   const [paused, setPaused] = useState(false);
-  const [steps, setSteps] = useState(3);
+  const [steps, setSteps] = useState(FALLBACK_CONFIG.defaultSteps);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<number | null>(null);

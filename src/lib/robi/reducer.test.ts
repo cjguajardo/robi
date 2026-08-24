@@ -57,7 +57,7 @@ describe("reducer — state transitions", () => {
     // runCommand is a test helper that runs the typical EXECUTE→COMPLETE
     // cycle. EXECUTE only queues the movement (pendingMove), so final
     // state still has the OLD position. In real flow, APPLY_MOVEMENT
-    // (dispatched after audio) would commit the change.
+    // (dispatched immediately by the realtime server) would commit it.
     const captured: RobiWorld[] = [];
     const final = runCommand(
       { ...initialWorld, state: "IDLE", position: { x: 0, y: 0 } },
@@ -102,8 +102,7 @@ describe("reducer — exhaustive command coverage", () => {
   it("WALK_LEFT rotates to WEST and queues the translation as pendingMove (no eager position change)", () => {
     // The kid should see ROBI turn to face west and say the cue
     // without actually translating — the translation is applied
-    // later via the APPLY_MOVEMENT event dispatched by the server
-    // AFTER audio playback ends.
+    // immediately afterward via the server's APPLY_MOVEMENT event.
     const start = { ...initialWorld, state: "IDLE" as const, direction: "SOUTH" as const, position: { x: 0, y: 0 } };
     const next = reduceWorld(start, {
       type: "EXECUTE",

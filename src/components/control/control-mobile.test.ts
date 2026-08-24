@@ -28,7 +28,7 @@ describe("/control mobile initial state", () => {
     expect(html).toContain('class="badge badge-sleeping"');
     expect(html).toContain("width:80px");
     expect(html).not.toContain("width:132px");
-    expect(html).toMatch(/checked="" value="3"/);
+    expect(html).toMatch(/checked="" value="5"/);
     expect(controlCss).toMatch(/\.badge-frame\s*{[^}]*border-radius:[^;}]+;[^}]*overflow:\s*hidden/s);
     expect(controlCss).toMatch(/\.badge-paused-overlay\s*{[^}]*border-radius:\s*inherit/s);
     expect(controlCss).toMatch(/\.badge-paused-overlay\s*{[^}]*place-content:\s*center/s);
@@ -103,10 +103,10 @@ describe("/control mobile initial state", () => {
     expect(controlCss).toMatch(/\.stage-position-button\s*{[^}]*min-height:\s*44px/s);
   });
 
-  it("renders steps 1-5 as a keyboard-accessible calculator keypad with 3 selected", () => {
+  it("renders steps 1-10 as a keyboard-accessible keypad with 5 selected", () => {
     const html = renderToStaticMarkup(
       createElement(CommandPanel, {
-        steps: 3,
+        steps: 5,
         onStepsChange: vi.fn(),
         onCommand: vi.fn(),
       }),
@@ -114,9 +114,10 @@ describe("/control mobile initial state", () => {
 
     expect(html).toContain('role="radiogroup"');
     expect(html).toContain('aria-label="Cantidad de pasos"');
-    expect(html.match(/type="radio"/g)).toHaveLength(5);
-    expect(html).toMatch(/checked="" value="3"/);
-    expect(controlCss).toMatch(/\.sg-root\s*{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(3,/s);
+    expect(html.match(/type="radio"/g)).toHaveLength(10);
+    expect(html).toMatch(/checked="" value="5"/);
+    expect(html).toContain('value="10"');
+    expect(controlCss).toMatch(/\.sg-root\s*{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(5,/s);
     expect(controlCss).toMatch(/\.sg-item-control\s*{[^}]*min-width:\s*32px[^}]*height:\s*44px/s);
     expect(controlCss).toMatch(/\.sg-item-control\[data-state="checked"\]\s*{[^}]*background:/s);
     expect(controlCss).toMatch(/\.sg-item-control\[data-focus-visible\]\s*{[^}]*outline:/s);

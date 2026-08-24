@@ -4,10 +4,11 @@ import { parseCommand } from "./parser";
 describe("parser", () => {
   it("routes bare 'izquierda' / 'derecha' to lateral walk", () => {
     // The dpad arrows and the bare noun mean "walk sideways".
-    expect(parseCommand("izquierda")).toEqual({ type: "WALK_LEFT", steps: 1 });
-    expect(parseCommand("derecha")).toEqual({ type: "WALK_RIGHT", steps: 1 });
-    expect(parseCommand("camina a la izquierda")).toEqual({ type: "WALK_LEFT", steps: 1 });
+    expect(parseCommand("izquierda")).toEqual({ type: "WALK_LEFT", steps: 5 });
+    expect(parseCommand("derecha")).toEqual({ type: "WALK_RIGHT", steps: 5 });
+    expect(parseCommand("camina a la izquierda")).toEqual({ type: "WALK_LEFT", steps: 5 });
     expect(parseCommand("ve a la derecha tres pasos")).toEqual({ type: "WALK_RIGHT", steps: 3 });
+    expect(parseCommand("ve a la derecha diez pasos")).toEqual({ type: "WALK_RIGHT", steps: 10 });
   });
 
   it("returns UNKNOWN for 'gira' / 'voltea' (turns removed)", () => {

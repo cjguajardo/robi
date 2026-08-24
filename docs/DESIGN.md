@@ -916,8 +916,8 @@ Ejemplo:
 
 ```ts
 export const config = {
-  maxSteps: 5,
-  defaultSteps: 1,
+  maxSteps: 10,
+  defaultSteps: 5,
   speechEnabled: true,
   ttsEnabled: true,
   modelFallbackEnabled: false

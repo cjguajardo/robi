@@ -48,8 +48,8 @@ export const QUICK_COMMANDS: RobiCommandType[] = [
  * clamped on validation.
  */
 export const FALLBACK_CONFIG: RobiConfig = {
-  maxSteps: 5,
-  defaultSteps: 1,
+  maxSteps: 10,
+  defaultSteps: 5,
   llmFallbackEnabled: false,
 };
 
@@ -59,7 +59,7 @@ export const FALLBACK_CONFIG: RobiConfig = {
  * /display stage transform and the server's per-step animation budget.
  *
  * Why 64px: big enough that 1-step moves are visible from across a
- * classroom, small enough that 5 steps (the MAX_STEPS cap) stay on
+ * classroom, small enough that 10 steps (the MAX_STEPS cap) stay on
  * screen even at modest projector resolutions.
  */
 export const BLOCK_PX = 64;

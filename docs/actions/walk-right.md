@@ -4,7 +4,7 @@ Espejo de [WALK_LEFT](./walk-left.md): rota el avatar a EAST y lo desplaza `+ste
 
 ## TL;DR
 
-Comando de movimiento lateral derecho; direction EAST inmediata, position deferred hasta `APPLY_MOVEMENT` post-audio.
+Comando lateral derecho; dirección, audio, sprite y desplazamiento comienzan juntos.
 
 ## Flowchart
 
@@ -18,7 +18,8 @@ flowchart LR
         WAIT["waitForSpeechEnded"]
         APPLY["APPLY_MOVEMENT → position.x += steps"]
         COMP["COMPLETE → IDLE"]
-        EXEC --> BR --> WAIT --> APPLY --> COMP
+        EXEC --> APPLY --> COMP
+        EXEC --> BR --> WAIT --> COMP
     end
 
     SVR -->|SAY + WORLD_CHANGED ×2| DISP
@@ -42,7 +43,7 @@ flowchart LR
 { type: "WALK_RIGHT"; steps: number }
 ```
 
-`steps`: entero en `[1, 5]`.
+`steps`: entero en `[1, 10]`.
 
 ## Disparador
 
@@ -71,9 +72,8 @@ Idénticos a [WALK_LEFT](./walk-left.md#disparador).
 | T | Event | Reducer | Sprite |
 |---|---|---|---|
 | 0 | `EXECUTE {command: WALK_RIGHT, steps}` | `EXECUTING`, `direction = EAST`, `pendingMove = {x: +steps, y: 0}` | `walking` |
-| audio_end | `RETURN_TO_EXECUTION` | `EXECUTING` | `walking` |
-| audio_end | `APPLY_MOVEMENT` | `EXECUTING`, `position.x += steps` | `walking` |
-| post-delay | `COMPLETE` | `IDLE` | `idle` |
+| 0 | `APPLY_MOVEMENT` + `SAY` | `EXECUTING`, `position.x += steps` | `walking` + audio |
+| max(audio, move) | `COMPLETE` | `IDLE` | `idle` |
 
 `actionAnimationMs(WALK_RIGHT) = max(400, steps * 350)` ms (idéntico a WALK_LEFT).
 
@@ -83,10 +83,10 @@ Idénticos a [WALK_LEFT](./walk-left.md#disparador).
 Cambia INMEDIATAMENTE en EXECUTE. Avatar se voltea a EAST.
 
 ### Posición
-DIFERIDO. `pendingMove = {x: +steps, y: 0}`. Aplicado post-audio.
+INMEDIATO después de EXECUTE. `pendingMove = {x: +steps, y: 0}` se aplica antes de esperar el final del audio.
 
 ### WORLD_CHANGED
-Dos broadcasts: post-EXECUTE (direction nueva) y post-APPLY_MOVEMENT (position nueva).
+Dos broadcasts consecutivos: post-EXECUTE (direction nueva) y post-APPLY_MOVEMENT (position nueva), ambos antes del final del audio.
 
 ## Sprite track
 

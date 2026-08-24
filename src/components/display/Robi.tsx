@@ -346,7 +346,7 @@ const transitionMs = useMemo<number>(() => {
   const skyStyle = useMemo<React.CSSProperties>(
     () => ({
       backgroundPosition: `${-position.x * BLOCK_PX * 0.2}px 0px`,
-      transition: `background-position ${transitionMs}ms ease-in-out`,
+      transition: `background-position ${transitionMs}ms linear`,
     }),
     [position, transitionMs],
   );
@@ -354,7 +354,7 @@ const transitionMs = useMemo<number>(() => {
   const sceneStyle = useMemo<React.CSSProperties>(
     () => ({
       backgroundPosition: `${-position.x * BLOCK_PX * 0.5}px ${-position.y * BLOCK_PX * 0.5}px`,
-      transition: `background-position ${transitionMs}ms ease-in-out`,
+      transition: `background-position ${transitionMs}ms linear`,
     }),
     [position, transitionMs],
   );
@@ -362,7 +362,7 @@ const transitionMs = useMemo<number>(() => {
   const floorStyle = useMemo<React.CSSProperties>(
     () => ({
       backgroundPosition: `${-position.x * BLOCK_PX}px ${position.y * BLOCK_PX}px`,
-      transition: `background-position ${transitionMs}ms ease-in-out`,
+      transition: `background-position ${transitionMs}ms linear`,
     }),
     [position, transitionMs],
   );

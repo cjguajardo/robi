@@ -433,8 +433,8 @@ Usado por: `RESET` (literal "Vuelvo al inicio.") y `ANSWER_QUESTION` (respuesta 
 
 ```ts
 export const SERVER_CONFIG = {
-  maxSteps: 5,             // cap superior para WALK_LEFT/RIGHT
-  defaultSteps: 1,         // si no se menciona número
+  maxSteps: 10,            // cap superior para WALK_LEFT/RIGHT
+  defaultSteps: 5,         // si no se menciona número
   llmFallbackEnabled: false, // deshabilitado por defecto (determinístico)
   speechEnabled: true,
   ttsEnabled: true,
@@ -512,7 +512,7 @@ export const SERVER_CONFIG = {
 | `src/components/control/CommandPanel.tsx` | Botones manuales + dpad |
 | `src/components/control/EmergencyControls.tsx` | Botón de pausa/emergencia |
 | `src/components/control/RobiStateBadge.tsx` | Estado visual |
-| `src/components/control/StepPicker.tsx` | Selector de steps (1-5) |
+| `src/components/control/StepPicker.tsx` | Selector de steps (1-10) |
 
 ### Endpoints
 

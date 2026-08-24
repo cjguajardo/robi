@@ -15,15 +15,13 @@ export interface RobiWorld {
   direction: Direction;
   paused: boolean;
   /**
-   * Deferred movement vector for WALK_LEFT / WALK_RIGHT / JUMP.
+   * Sequenced movement vector for WALK_LEFT / WALK_RIGHT.
    *
    * EXECUTE for movement commands sets this but DOES NOT change
-   * `position` — the kid sees ROBI say the audio cue in place. The
-   * server then dispatches an `APPLY_MOVEMENT` event after audio
-   * playback ends, which adds the vector to `position` and broadcasts
-   * a fresh WORLD_CHANGED. The CSS parallax + sprite shift animation
-   * only runs from that moment, so the visual move is tied to the
-   * post-audio walking animation — not to the command itself.
+   * `position`. The server dispatches `APPLY_MOVEMENT` immediately in
+   * the same command turn, after clients receive COMMAND/EXECUTING but
+   * before audio ends. This ordering starts speech, sprite and world
+   * translation together while keeping the reducer events explicit.
    *
    * `null` means no pending movement.
    */
@@ -125,12 +123,10 @@ export function reduceWorld(world: RobiWorld, event: RobiEvent): RobiWorld {
       if (cmd.type === "UNKNOWN") {
         return { ...world, state: "CONFUSED" };
       }
-      // Movement commands update DIRECTION immediately (so the avatar
-      // faces the new heading) but DEFER the position change into
-      // `pendingMove`. The actual translation happens on APPLY_MOVEMENT,
-      // which is dispatched by the server AFTER audio playback ends —
-      // so the kid sees ROBI say "¡A la izquierda!" in place first,
-      // then watch the avatar walk toward the destination.
+      // Movement commands update DIRECTION first and expose the vector as
+      // `pendingMove`. The server applies it immediately afterward in the
+      // same command turn, letting clients receive COMMAND/EXECUTING before
+      // the destination so walking, translation and speech begin together.
       switch (cmd.type) {
         // Lateral walking — rotate first, queue the translation.
         case "WALK_LEFT":
