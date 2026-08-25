@@ -93,13 +93,16 @@ export function Controller() {
         setPaused(false);
         break;
       case "RESET":
-        setRobiState("IDLE");
+        setRobiState("SLEEPING");
+        setPaused(false);
         break;
       case "SAY":
       case "COMMAND":
       case "WORLD_CHANGED":
       case "ADD_STAGE_ITEM":
       case "STAGE_ITEM_CHANGED":
+      case "PRESENTATION_GOTO":
+      case "PRESENTATION_CHANGED":
       case "SPEECH_STARTED":
       case "SPEECH_ENDED":
         break;

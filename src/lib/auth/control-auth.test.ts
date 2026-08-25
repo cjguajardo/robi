@@ -92,6 +92,7 @@ describe("WebSocket control authorization", () => {
     "RESET",
     "PAUSE",
     "RESUME",
+    "PRESENTATION_GOTO",
   ])("blocks unauthenticated control event %s", (type) => {
     expect(isControlEventAllowed(type, false)).toBe(false);
   });
@@ -107,7 +108,13 @@ describe("WebSocket control authorization", () => {
     expect(isControlEventAllowed("COMMAND", true)).toBe(true);
   });
 
-  it.each(["SNAPSHOT", "STATE_CHANGED", "SAY", "WORLD_CHANGED"])(
+  it.each([
+    "SNAPSHOT",
+    "STATE_CHANGED",
+    "SAY",
+    "WORLD_CHANGED",
+    "PRESENTATION_CHANGED",
+  ])(
     "continues to reject server-only inbound event %s",
     (type) => {
       expect(isControlEventAllowed(type, true)).toBe(false);

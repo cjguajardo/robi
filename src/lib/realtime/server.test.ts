@@ -6,6 +6,7 @@ import {
   attachPeer,
   detachPeer,
   ingestCommand,
+  ingestPresentationGoto,
   ingestStageItemRequest,
   ingestSpeechEvent,
   ingestWorldEvent,
@@ -66,6 +67,48 @@ describe("realtime hub", () => {
     expect(snap.state).toBe("SLEEPING");
     detachPeer(handle);
   });
+
+  it("synchronizes presentation navigation and includes it on reconnect", () => {
+    const first = makePeer();
+    attachPeer(first.handle);
+    first.events.length = 0;
+
+    expect(ingestPresentationGoto(4)).toEqual({
+      currentSlide: 4,
+      totalSlides: 7,
+    });
+    expect(first.events).toContainEqual({
+      type: "PRESENTATION_CHANGED",
+      payload: { currentSlide: 4, totalSlides: 7 },
+    });
+
+    const late = makePeer();
+    const snapshot = attachPeer(late.handle);
+    expect(snapshot.presentation).toEqual({
+      currentSlide: 4,
+      totalSlides: 7,
+    });
+    detachPeer(first.handle);
+    detachPeer(late.handle);
+  });
+
+  it.each([0, 8, 2.5, "3", null])(
+    "rejects invalid presentation slide %s",
+    (slide) => {
+      const { events, handle } = makePeer();
+      attachPeer(handle);
+      events.length = 0;
+
+      expect(ingestPresentationGoto(slide)).toEqual({
+        currentSlide: 1,
+        totalSlides: 7,
+      });
+      expect(events).not.toContainEqual(
+        expect.objectContaining({ type: "PRESENTATION_CHANGED" }),
+      );
+      detachPeer(handle);
+    },
+  );
 
   it("creates one shared random stage item from the selected placement", () => {
     const { events, handle } = makePeer();
@@ -344,14 +387,28 @@ describe("realtime hub", () => {
     detachPeer(handle);
   });
 
-  it("RESET clears state and broadcasts", () => {
+  it("RESET clears the complete stage and leaves ROBI sleeping", () => {
     const { events, handle } = makePeer();
     attachPeer(handle);
+    ingestStageItemRequest("RIGHT", () => 0);
+    ingestCommand({ type: "WALK_RIGHT", steps: 2 }, "camina a la derecha");
+    ingestWorldEvent("PAUSE");
     events.length = 0;
+
     ingestWorldEvent("RESET");
+
+    const snap = readSnapshot();
     expect(events.some((e) => e.type === "RESET")).toBe(true);
-    expect(events.some((e) => e.type === "STATE_CHANGED" && e.payload === "IDLE")).toBe(true);
-    expect(readSnapshot().position).toEqual({ x: 0, y: 0 });
+    expect(events.some((e) => e.type === "STATE_CHANGED" && e.payload === "SLEEPING")).toBe(true);
+    expect(snap).toMatchObject({
+      state: "SLEEPING",
+      position: { x: 0, y: 0 },
+      direction: "SOUTH",
+      paused: false,
+      lastTranscript: "",
+      lastCommand: null,
+      stageItem: null,
+    });
     detachPeer(handle);
   });
 

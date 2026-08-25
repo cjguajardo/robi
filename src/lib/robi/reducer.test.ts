@@ -46,11 +46,18 @@ describe("reducer — state transitions", () => {
   });
 
   it("RESET returns to initial world", () => {
-    const dirty = { ...initialWorld, position: { x: 9, y: 9 }, direction: "EAST" as const };
+    const dirty = {
+      ...initialWorld,
+      state: "PAUSED" as const,
+      position: { x: 9, y: 9 },
+      direction: "EAST" as const,
+      paused: true,
+      pendingMove: { x: 2, y: 0 },
+    };
     const next = reduceWorld(dirty, { type: "RESET" });
     expect(next.position).toEqual({ x: 0, y: 0 });
     expect(next.direction).toBe("SOUTH");
-    expect(next.state).toBe("IDLE");
+    expect(next).toEqual(initialWorld);
   });
 
   it("runCommand helper does EXECUTE then COMPLETE (movement is queued, not applied)", () => {

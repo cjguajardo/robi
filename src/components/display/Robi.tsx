@@ -17,6 +17,11 @@ import { RobiAvatar } from "./RobiAvatar";
 import { RobiSpeechBubble } from "./RobiSpeechBubble";
 import { RobiStatus } from "./RobiStatus";
 import { StageItem } from "./StageItem";
+import {
+  shouldRelayAudioLifecycle,
+  type AudioLifecyclePurpose,
+} from "./audio-lifecycle";
+import { enterDisplayFullscreen } from "./fullscreen";
 
 const WS_PATH = "/ws";
 
@@ -56,6 +61,7 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioPurposeRef = useRef<AudioLifecyclePurpose>("idle");
   /** Tracks a blob URL we created from /api/tts so we can revoke it. */
   const blobUrlRef = useRef<string | null>(null);
   const speechTimer = useRef<number | null>(null);
@@ -115,6 +121,10 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
         speechTimer.current = window.setTimeout(() => setSpeech(null), 6000);
         break;
       case "RESET":
+        stopAudio();
+        setState("SLEEPING");
+        setPaused(false);
+        setSpeech(null);
         setPosition({ x: 0, y: 0 });
         setDirection("SOUTH");
         setLastCommand(null);
@@ -129,6 +139,8 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
         break;
       case "TRANSCRIPT":
       case "ADD_STAGE_ITEM":
+      case "PRESENTATION_GOTO":
+      case "PRESENTATION_CHANGED":
       case "SPEECH_STARTED":
       case "SPEECH_ENDED":
         break;
@@ -167,6 +179,7 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
   };
 
   const stopAudio = () => {
+    audioPurposeRef.current = "idle";
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -217,9 +230,16 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
   const unlockAudio = async () => {
     const audio = audioRef.current;
     if (!audio || audioUnlocked) return;
+    audioPurposeRef.current = "unlock";
     audio.src = SILENT_WAV;
+
+    // Both gated APIs must be invoked synchronously from this click.
+    // Start audio first because requestFullscreen consumes the document's
+    // transient user activation; await both only after both calls started.
+    const audioPlay = audio.play();
+    const fullscreenRequest = enterDisplayFullscreen(document);
     try {
-      await audio.play();
+      await audioPlay;
       audio.pause();
       audio.currentTime = 0;
       audio.src = "";
@@ -228,7 +248,13 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
       // Shouldn't happen — this handler runs inside a click event. If
       // it does, leave audioUnlocked=false so the operator can retry.
       audio.src = "";
+    } finally {
+      audioPurposeRef.current = "idle";
     }
+
+    // Fullscreen rejection is intentionally non-fatal: audio remains usable
+    // and enterDisplayFullscreen already normalizes the failure to false.
+    await fullscreenRequest;
   };
 
   /**
@@ -243,6 +269,7 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
     // A direct (pre-recorded) audio file — no `/api/tts` hop.
     if (payload.audioUrl) {
       if (audioRef.current) {
+        audioPurposeRef.current = "speech";
         audioRef.current.src = payload.audioUrl;
         await audioRef.current.play().catch(() => {
           // Autoplay blocked — see note in old `playTts`.
@@ -270,6 +297,7 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
       // `new Audio(url)` returns a detached element that browsers refuse
       // to autoplay in most cases — that's the bug this fixes.
       if (audioRef.current) {
+        audioPurposeRef.current = "speech";
         audioRef.current.src = url;
         await audioRef.current.play().catch(() => {
           // Autoplay may still be blocked if /display has never had user
@@ -287,9 +315,18 @@ export function Robi({ showStatus = false }: { showStatus?: boolean }) {
     // Wire up the audio element's lifecycle events so the server knows
     // when ROBI is actually talking vs silent. See `sendSpeechEvent`.
     const audio = audioRef.current;
-    const onPlay = () => sendSpeechEvent("SPEECH_STARTED");
-    const onEnded = () => sendSpeechEvent("SPEECH_ENDED");
-    const onError = () => sendSpeechEvent("SPEECH_ENDED");
+    const onPlay = () => {
+      if (shouldRelayAudioLifecycle(audioPurposeRef.current)) {
+        sendSpeechEvent("SPEECH_STARTED");
+      }
+    };
+    const finishSpeech = () => {
+      if (!shouldRelayAudioLifecycle(audioPurposeRef.current)) return;
+      audioPurposeRef.current = "idle";
+      sendSpeechEvent("SPEECH_ENDED");
+    };
+    const onEnded = () => finishSpeech();
+    const onError = () => finishSpeech();
     if (audio) {
       audio.addEventListener("play", onPlay);
       audio.addEventListener("ended", onEnded);
@@ -403,11 +440,17 @@ const transitionMs = useMemo<number>(() => {
         type="button"
         className="audio-unlock"
         onClick={unlockAudio}
-        aria-label={audioUnlocked ? "Audio activado" : "Activar audio"}
+        aria-label={
+          audioUnlocked
+            ? "Audio activado"
+            : "Activar audio y pantalla completa"
+        }
         data-unlocked={audioUnlocked}
         disabled={audioUnlocked}
       >
-        {audioUnlocked ? "🔊 Audio listo" : "🔊 Activar audio"}
+        {audioUnlocked
+          ? "🔊 Audio listo"
+          : "🔊 Activar audio y pantalla completa"}
       </button>
       {/* Brand mark — top-center, subtle, doesn't compete with the
           avatar or the speech bubble. Hidden on very small viewports

@@ -8,6 +8,7 @@ import {
   attachPeer,
   detachPeer,
   ingestCommand,
+  ingestPresentationGoto,
   ingestStageItemRequest,
   ingestWorldEvent,
   ingestSay,
@@ -98,6 +99,9 @@ export function handleIncoming(
     case "ADD_STAGE_ITEM":
       ingestStageItemRequest(event.payload.placement);
       break;
+    case "PRESENTATION_GOTO":
+      ingestPresentationGoto(event.payload.slide);
+      break;
     case "TRANSCRIPT":
       // Just store + broadcast — no execution yet (control view already shows it).
       ingestCommand({ type: "STOP" }, event.payload);
@@ -122,6 +126,7 @@ export function handleIncoming(
     case "SAY":
     case "WORLD_CHANGED":
     case "STAGE_ITEM_CHANGED":
+    case "PRESENTATION_CHANGED":
       // Server-driven; ignore from client.
       break;
     case "SPEECH_STARTED":

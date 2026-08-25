@@ -168,7 +168,7 @@ export function reduceWorld(world: RobiWorld, event: RobiEvent): RobiWorld {
             pendingMove: null,
           };
         case "RESET":
-          return { ...initialWorld, state: "IDLE" };
+          return { ...initialWorld };
         // Non-movement content actions — no position/direction change.
         case "TELL_JOKE":
         case "TELL_RIDDLE":
@@ -240,7 +240,7 @@ export function reduceWorld(world: RobiWorld, event: RobiEvent): RobiWorld {
       return { ...world, state: "IDLE", paused: false };
 
     case "RESET":
-      return { ...initialWorld, state: "IDLE" };
+      return { ...initialWorld };
   }
 }
 

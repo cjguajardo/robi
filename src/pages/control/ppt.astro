@@ -1,0 +1,9 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { PptController } from "../../components/presentation/PptController";
+import "../../styles/control-ppt.css";
+---
+
+<BaseLayout title="ROBI · Control de presentación">
+  <PptController client:only="react" />
+</BaseLayout>

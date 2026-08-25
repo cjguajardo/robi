@@ -1,0 +1,9 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { PptDisplay } from "../components/presentation/PptDisplay";
+import "../styles/ppt.css";
+---
+
+<BaseLayout title="ROBI · Presentación" bare={true}>
+  <PptDisplay client:only="react" />
+</BaseLayout>

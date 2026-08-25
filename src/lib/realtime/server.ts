@@ -3,6 +3,7 @@
 
 import type {
   Position,
+  PresentationState,
   RealtimeEvent,
   RobiCommand,
   RobiState,
@@ -10,6 +11,7 @@ import type {
   StageItem,
   StageItemPlacement,
 } from "@/types/robi";
+import { PRESENTATION_SLIDES } from "@/lib/presentation/slides";
 import { initialWorld, reduceWorld, type RobiWorld } from "@/lib/robi/reducer";
 import { validateCommand } from "@/lib/robi/validator";
 import { SERVER_CONFIG } from "@/lib/robi/config.server";
@@ -47,7 +49,10 @@ interface World {
   pendingAudioResolver: (() => void) | null;
   /** Timer handle for the safety timeout on `pendingAudioResolver`. */
   pendingAudioTimer: ReturnType<typeof setTimeout> | null;
+  /** Invalidates async command work that was still awaiting I/O during RESET. */
+  commandGeneration: number;
   stageItem: StageItem | null;
+  presentationSlide: number;
 }
 
 const state: World = {
@@ -59,7 +64,9 @@ const state: World = {
   processing: false,
   pendingAudioResolver: null,
   pendingAudioTimer: null,
+  commandGeneration: 0,
   stageItem: null,
+  presentationSlide: 1,
 };
 
 interface ScheduledStageCollision {
@@ -78,6 +85,14 @@ function snapshot(): SessionSnapshot {
     lastCommand: state.lastCommand,
     paused: state.world.paused,
     stageItem: state.stageItem,
+    presentation: presentationState(),
+  };
+}
+
+function presentationState(): PresentationState {
+  return {
+    currentSlide: state.presentationSlide,
+    totalSlides: PRESENTATION_SLIDES.length,
   };
 }
 
@@ -156,6 +171,8 @@ async function drainQueue(): Promise<void> {
   if (!next) return;
 
   state.processing = true;
+  const commandGeneration = state.commandGeneration;
+  const wasReset = () => commandGeneration !== state.commandGeneration;
   // Broadcast the COMMAND BEFORE the state transition so clients receive
   // the command context (which command triggered EXECUTING?) before the
   // STATE_CHANGED event that depends on it. Sprite/display logic uses
@@ -272,6 +289,7 @@ async function drainQueue(): Promise<void> {
     }
 
     const answer = await llmPromise;
+    if (wasReset()) return;
     const answerWithAudio: { text: string; audioUrl?: string; durationMs?: number } =
       answer.audioUrl
         ? answer
@@ -289,6 +307,7 @@ async function drainQueue(): Promise<void> {
               return answer;
             },
           );
+    if (wasReset()) return;
 
     // Set up the waiter BEFORE broadcasting so a fast-fire SPEECH_ENDED
     // (very short answer audio, pre-cached player) still has someone
@@ -305,6 +324,7 @@ async function drainQueue(): Promise<void> {
     const waiter = waitForSpeechEnded(answerWithAudio.durationMs);
     broadcast({ type: "SAY", payload: answerWithAudio });
     await waiter;
+    if (wasReset()) return;
   } else if (
     next.type === "TELL_JOKE" ||
     next.type === "TELL_RIDDLE" ||
@@ -336,6 +356,7 @@ async function drainQueue(): Promise<void> {
       broadcast({ type: "SAY", payload: preamble });
       const preambleMs = preambleDurationMs(kind);
       await sleep(preambleMs + CONTENT_BUFFER_MS);
+      if (wasReset()) return;
     }
     // Size the waiter off the picked content's actual duration. Several
     // catalog audios are 8-13s (fact-01 is 13.2s — see audios.json) and
@@ -345,11 +366,13 @@ async function drainQueue(): Promise<void> {
     const waiter = waitForSpeechEnded(phrase.durationMs);
     broadcast({ type: "SAY", payload: phrase });
     await waiter;
+    if (wasReset()) return;
   } else {
     const phrase = responseForWithAudio(next);
     const waiter = waitForSpeechEnded(phrase.durationMs);
     broadcast({ type: "SAY", payload: phrase });
     await waiter;
+    if (wasReset()) return;
   }
 
   // Walking visual time started before the SAY and therefore overlaps
@@ -358,8 +381,10 @@ async function drainQueue(): Promise<void> {
   // Other action tracks keep their existing post-audio hold behavior.
   if (walkVisualCompletion) {
     await walkVisualCompletion;
+    if (wasReset()) return;
   } else if (visualDelayMs > 0) {
     await sleep(visualDelayMs);
+    if (wasReset()) return;
   }
   state.processing = false;
   transition({ type: "COMPLETE" });
@@ -440,13 +465,21 @@ export function ingestWorldEvent(
       break;
     case "RESET":
       cancelScheduledStageCollisions();
+      state.commandGeneration += 1;
       state.queue = [];
       state.processing = false;
-      state.world = { ...initialWorld, state: "IDLE" };
+      if (state.pendingAudioTimer) clearTimeout(state.pendingAudioTimer);
+      state.pendingAudioTimer = null;
+      const pendingAudioResolver = state.pendingAudioResolver;
+      state.pendingAudioResolver = null;
+      pendingAudioResolver?.();
+      state.world = { ...initialWorld };
+      state.lastTranscript = "";
+      state.lastCommand = null;
       state.stageItem = null;
       broadcast({ type: "RESET" });
       broadcast({ type: "STAGE_ITEM_CHANGED", payload: null });
-      broadcast({ type: "STATE_CHANGED", payload: "IDLE" });
+      broadcast({ type: "STATE_CHANGED", payload: "SLEEPING" });
       break;
   }
 }
@@ -473,6 +506,24 @@ export function ingestStageItemRequest(
   return item;
 }
 
+/** Move the shared presentation to one validated, one-based slide. */
+export function ingestPresentationGoto(slide: unknown): PresentationState {
+  if (
+    !Number.isInteger(slide) ||
+    typeof slide !== "number" ||
+    slide < 1 ||
+    slide > PRESENTATION_SLIDES.length ||
+    slide === state.presentationSlide
+  ) {
+    return presentationState();
+  }
+
+  state.presentationSlide = slide;
+  const next = presentationState();
+  broadcast({ type: "PRESENTATION_CHANGED", payload: next });
+  return next;
+}
+
 /** Request ROBI to say something — used after parse / command.
  *  Accepts either a string (no audio — falls back to /api/tts) or a
  *  pre-built SayPayload (text + optional audioUrl). */
@@ -489,6 +540,7 @@ export function readSnapshot(): SessionSnapshot {
 /** Reset world + clear peers. Test-only helper. */
 export function _resetForTesting(): void {
   cancelScheduledStageCollisions();
+  state.commandGeneration += 1;
   state.world = { ...initialWorld };
   state.lastTranscript = "";
   state.lastCommand = null;
@@ -501,6 +553,7 @@ export function _resetForTesting(): void {
   state.pendingAudioTimer = null;
   state.pendingAudioResolver = null;
   state.stageItem = null;
+  state.presentationSlide = 1;
 }
 
 function removeStageItemAfter(item: StageItem, delayMs: number): Promise<boolean> {

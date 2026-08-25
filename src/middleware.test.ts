@@ -40,6 +40,17 @@ describe("control authentication middleware", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it("protects the presentation controller under /control", async () => {
+    const next = vi.fn(async () => new Response("private"));
+    const response = requireResponse(
+      await onRequest(context("/control/ppt") as never, next),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("/control/login");
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("returns JSON 401 for an unauthenticated controller API", async () => {
     const next = vi.fn(async () => new Response("private"));
     const response = requireResponse(

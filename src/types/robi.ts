@@ -94,6 +94,12 @@ export interface SayPayload {
   audioUrl?: string;
 }
 
+/** Shared slide state for the projected profession presentation. */
+export interface PresentationState {
+  currentSlide: number;
+  totalSlides: number;
+}
+
 /** Realtime wire format — see DESIGN.md §14. */
 export type RealtimeEvent =
   | { type: "COMMAND"; payload: RobiCommand }
@@ -101,6 +107,9 @@ export type RealtimeEvent =
   // object and side distance so every connected peer sees one result.
   | { type: "ADD_STAGE_ITEM"; payload: { placement: StageItemPlacement } }
   | { type: "STAGE_ITEM_CHANGED"; payload: StageItem | null }
+  // Authenticated controller request + server-authoritative result.
+  | { type: "PRESENTATION_GOTO"; payload: { slide: number } }
+  | { type: "PRESENTATION_CHANGED"; payload: PresentationState }
   | { type: "STATE_CHANGED"; payload: RobiState }
   // World sync — broadcast after each EXECUTE so the /display can
   // render the new (position, direction). STATE_CHANGED only carries
@@ -125,6 +134,7 @@ export interface SessionSnapshot {
   lastCommand: RobiCommand | null;
   paused: boolean;
   stageItem: StageItem | null;
+  presentation: PresentationState;
 }
 
 /** Configuration knobs — see DESIGN.md §32. */

@@ -24,4 +24,18 @@ describe("WebSocket controller authentication", () => {
 
     expect(readSnapshot().paused).toBe(false);
   });
+
+  it("only accepts presentation navigation from an authenticated peer", () => {
+    handleIncoming(
+      { type: "PRESENTATION_GOTO", payload: { slide: 5 } },
+      false,
+    );
+    expect(readSnapshot().presentation.currentSlide).toBe(1);
+
+    handleIncoming(
+      { type: "PRESENTATION_GOTO", payload: { slide: 5 } },
+      true,
+    );
+    expect(readSnapshot().presentation.currentSlide).toBe(5);
+  });
 });

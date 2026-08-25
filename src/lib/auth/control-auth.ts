@@ -10,6 +10,7 @@ const CONTROL_EVENT_TYPES = new Set([
   "RESET",
   "PAUSE",
   "RESUME",
+  "PRESENTATION_GOTO",
 ]);
 
 const DISPLAY_EVENT_TYPES = new Set(["SPEECH_STARTED", "SPEECH_ENDED"]);
