@@ -1,0 +1,115 @@
+.control-login {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding:
+    max(env(safe-area-inset-top), 24px)
+    18px
+    max(env(safe-area-inset-bottom), 24px);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(110, 231, 255, 0.13), transparent 42%),
+    var(--bg);
+}
+
+.login-card {
+  width: min(100%, 420px);
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  background: rgba(18, 25, 51, 0.88);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+}
+
+.login-logo {
+  display: block;
+  width: 142px;
+  height: auto;
+  margin-bottom: 26px;
+  filter: drop-shadow(0 8px 24px rgba(110, 231, 255, 0.22));
+}
+
+.login-heading {
+  margin-bottom: 24px;
+}
+
+.login-eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-heading h1 {
+  margin: 0 0 8px;
+  font-size: clamp(28px, 8vw, 36px);
+  letter-spacing: -0.035em;
+}
+
+.login-heading p:last-child {
+  margin: 0;
+  color: var(--fg-dim);
+  line-height: 1.5;
+}
+
+.login-error {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 107, 139, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 107, 139, 0.1);
+  color: #ffc2d0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.login-form {
+  display: grid;
+  gap: 10px;
+}
+
+.login-form label {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.login-form input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 13px;
+  background: rgba(5, 9, 22, 0.68);
+  color: var(--fg);
+  font: inherit;
+  font-size: 17px;
+  outline: none;
+}
+
+.login-form input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(110, 231, 255, 0.18);
+}
+
+.login-form button {
+  min-height: 52px;
+  margin-top: 6px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.login-form button:active {
+  transform: scale(0.985);
+}
+
+@media (max-width: 380px) {
+  .login-card {
+    padding: 22px;
+  }
+}

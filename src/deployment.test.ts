@@ -48,4 +48,50 @@ describe("production container", () => {
     expect(server).toMatch(/process\.env\.PORT \?\? 4321/);
     expect(server).toMatch(/process\.env\.HOST \?\? "0\.0\.0\.0"/);
   });
+
+  it("documents controller authentication without baking its password into the image", () => {
+    const envExample = rootFile(".env.example");
+    const dockerfile = rootFile("Dockerfile");
+
+    expect(envExample).toMatch(/^CONTROL_PASSWORD=$/m);
+    expect(dockerfile).not.toContain("CONTROL_PASSWORD");
+  });
+
+  it("builds and runs the production image from Compose", () => {
+    const compose = rootFile("compose.yml");
+
+    expect(compose).toMatch(/build:\s*\n\s+context:\s*\./);
+    expect(compose).toMatch(/dockerfile:\s*Dockerfile/);
+    expect(compose).not.toContain("ghcr.io/pnpm/pnpm");
+    expect(compose).not.toContain(".:/app");
+    expect(compose).not.toContain("pnpm build && pnpm start");
+    expect(compose).not.toMatch(/CONTROL_PASSWORD\s*=/);
+    expect(compose).toContain('"127.0.0.1:4321:4321"');
+  });
+
+  it("keeps the relocated audio catalog available to both Docker stages", () => {
+    const dockerfile = rootFile("Dockerfile");
+    const dockerignore = rootFile(".dockerignore");
+
+    expect(dockerfile).toContain(
+      "COPY assets/sonidos/audios.json ./assets/sonidos/audios.json",
+    );
+    expect(dockerfile).toContain(
+      "COPY --from=build --chown=node:node /app/assets/sonidos/audios.json ./assets/sonidos/audios.json",
+    );
+    expect(dockerignore).toMatch(/^!assets\/sonidos\/$/m);
+    expect(dockerignore).toMatch(/^!assets\/sonidos\/audios\.json$/m);
+  });
+
+  it("uses the relocated audio workspace consistently", () => {
+    const packageJson = JSON.parse(rootFile("package.json"));
+
+    expect(packageJson.scripts.audios).toContain("assets/sonidos/generate.mjs");
+    expect(packageJson.scripts["audios:install"]).toContain(
+      "assets/sonidos/audios/*.mp3",
+    );
+    expect(packageJson.scripts["audios:durations"]).toContain(
+      "assets/sonidos/durations.mjs",
+    );
+  });
 });

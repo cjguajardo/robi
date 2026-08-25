@@ -1,0 +1,48 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/control-login.css";
+
+const error = Astro.url.searchParams.get("error");
+const errorMessage =
+  error === "invalid"
+    ? "La contraseña no es correcta. Intentá de nuevo."
+    : error === "configuration"
+      ? "El servidor todavía no tiene configurada CONTROL_PASSWORD."
+      : null;
+---
+
+<BaseLayout title="ROBI · Acceso al control">
+  <main class="control-login">
+    <section class="login-card" aria-labelledby="login-title">
+      <img
+        src="/logo.webp"
+        alt="ROBI — El amigo del aula"
+        class="login-logo"
+        width="242"
+        height="128"
+      />
+      <div class="login-heading">
+        <p class="login-eyebrow">Acceso privado</p>
+        <h1 id="login-title">Control de ROBI</h1>
+        <p>Ingresá la contraseña para usar el control.</p>
+      </div>
+
+      {errorMessage && (
+        <p class="login-error" role="alert">{errorMessage}</p>
+      )}
+
+      <form method="post" action="/api/control/login" class="login-form">
+        <label for="control-password">Contraseña</label>
+        <input
+          id="control-password"
+          name="password"
+          type="password"
+          required
+          autocomplete="current-password"
+          autofocus
+        />
+        <button type="submit">Entrar al control</button>
+      </form>
+    </section>
+  </main>
+</BaseLayout>

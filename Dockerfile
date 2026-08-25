@@ -18,7 +18,7 @@ FROM build-dependencies AS build
 
 COPY astro.config.mjs tsconfig.json ./
 COPY public ./public
-COPY sonidos/audios.json ./sonidos/audios.json
+COPY assets/sonidos/audios.json ./assets/sonidos/audios.json
 COPY src ./src
 
 RUN pnpm build
@@ -41,7 +41,7 @@ ENV PORT=4321
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json server.mjs tsconfig.json ./
-COPY --chown=node:node sonidos/audios.json ./sonidos/audios.json
+COPY --from=build --chown=node:node /app/assets/sonidos/audios.json ./assets/sonidos/audios.json
 COPY --chown=node:node src ./src
 
 USER node

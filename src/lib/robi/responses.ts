@@ -6,8 +6,8 @@
 //     `responseFor`).
 //   - The AUDIO file played via the `audioUrl` field of the SAY event.
 //
-// Both come from `sonidos/audios.json` — that's the canonical source
-// (it's what the OpenAI batch generator reads; see sonidos/README.md).
+// Both come from `assets/sonidos/audios.json` — that's the canonical source
+// (it's what the OpenAI batch generator reads; see assets/sonidos/README.md).
 // We DON'T maintain a hand-written array of texts in this file: that
 // would be a second source of truth, and the bubble would drift out of
 // sync with the audio the moment someone regenerates with a different
@@ -235,7 +235,7 @@ function preambleCategory(kind: "joke" | "riddle" | "fact"): AudioCategory {
 /**
  * Duration of the preamble audio for a content command, in
  * milliseconds. Reads `durationMs` from the catalog entry — populated
- * by `sonidos/durations.mjs` from `afinfo`.
+ * by `assets/sonidos/durations.mjs` from `afinfo`.
  *
  * If the duration is missing in the JSON (backfill script hasn't run
  * yet), falls back to a conservative default (1500ms). The +100ms

@@ -6,4 +6,7 @@ import "../styles/control.css";
 
 <BaseLayout title="ROBI · Control">
   <Controller client:only="react" />
+  <form method="post" action="/api/control/logout" class="control-logout">
+    <button type="submit" aria-label="Cerrar sesión del control">Salir</button>
+  </form>
 </BaseLayout>

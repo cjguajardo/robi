@@ -15,6 +15,10 @@ import {
 } from "@/lib/realtime/server";
 import type { RealtimeEvent, RobiCommand } from "@/types/robi";
 import { pausedResponseWithAudio, resumedResponseWithAudio } from "@/lib/robi/responses";
+import {
+  isControlCookieAuthenticated,
+  isControlEventAllowed,
+} from "@/lib/auth/control-auth";
 
 const PATH = "/ws";
 
@@ -42,8 +46,9 @@ export function attachWebSocket(server: HttpServer): void {
     });
   });
 
-  wss.on("connection", (ws: WebSocket) => {
-    console.log("[ws] connect");
+  wss.on("connection", (ws: WebSocket, request) => {
+    const authenticated = isControlCookieAuthenticated(request.headers.cookie);
+    console.log(`[ws] connect (${authenticated ? "control" : "display/read-only"})`);
 
     const peer = {
       send: (event: RealtimeEvent) => send(ws, event),
@@ -60,7 +65,7 @@ export function attachWebSocket(server: HttpServer): void {
       if (!parsed || typeof parsed !== "object") return;
       const obj = parsed as { type?: unknown };
       if (typeof obj.type !== "string") return;
-      handleIncoming(obj as RealtimeEvent);
+      handleIncoming(obj as RealtimeEvent, authenticated);
     });
 
     ws.on("close", () => {
@@ -74,7 +79,12 @@ export function attachWebSocket(server: HttpServer): void {
   });
 }
 
-function handleIncoming(event: RealtimeEvent): void {
+export function handleIncoming(
+  event: RealtimeEvent,
+  authenticated: boolean,
+): void {
+  if (!isControlEventAllowed(event.type, authenticated)) return;
+
   switch (event.type) {
     case "COMMAND": {
       const cmd: RobiCommand = event.payload;

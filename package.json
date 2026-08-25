@@ -14,9 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "astro check && tsc --noEmit",
-    "audios": "node sonidos/generate.mjs",
-    "audios:install": "mkdir -p public/audio && cp sonidos/audios/*.mp3 public/audio/",
-    "audios:durations": "node sonidos/durations.mjs"
+    "audios": "node assets/sonidos/generate.mjs",
+    "audios:install": "mkdir -p public/audio && cp assets/sonidos/audios/*.mp3 public/audio/",
+    "audios:durations": "node assets/sonidos/durations.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

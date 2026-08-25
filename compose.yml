@@ -1,0 +1,12 @@
+services:
+  robi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: robi:local
+    container_name: robi
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4321:4321"
+    env_file:
+      - .env

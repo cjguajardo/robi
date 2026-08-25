@@ -16,8 +16,8 @@ docs
 **/*.test.ts
 vitest.config.ts
 
-sonidos/audios
 *.xcf
-/Codex Image*.png
-/full-sprite.png
-/saludando.png
+assets/*
+!assets/sonidos/
+assets/sonidos/*
+!assets/sonidos/audios.json

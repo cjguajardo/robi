@@ -1,9 +1,9 @@
 // Audio catalog — single source of truth for ROBI's pre-generated
-// responses. Derived from `sonidos/audios.json` so the rotation picks
+// responses. Derived from `assets/sonidos/audios.json` so the rotation picks
 // text + audio path that always match (no bubble-vs-audio drift).
 //
 // audios.json is the canonical source (it's the file the OpenAI batch
-// generator reads — see sonidos/README.md). We don't maintain a parallel
+// generator reads — see assets/sonidos/README.md). We don't maintain a parallel
 // hand-written TypeScript mirror, because that's two sources of truth
 // that drift apart the moment someone adds a joke.
 //
@@ -27,7 +27,7 @@ export interface AudioEntry {
   audioUrl: string;
   /**
    * Audio duration in milliseconds. Source: audios.json `durationMs`,
-   * populated by `sonidos/durations.mjs` (afinfo) on demand. Used by
+   * populated by `assets/sonidos/durations.mjs` (afinfo) on demand. Used by
    * the server to compute dynamic wait time between preamble and
    * content SAYs for TELL_JOKE/RIDDLE/FACT.
    *
@@ -66,7 +66,7 @@ interface PhraseJson {
   filename: string;
   category: AudioCategory;
   text: string;
-  /** Optional — populated by `sonidos/durations.mjs` from `afinfo`. */
+  /** Optional — populated by `assets/sonidos/durations.mjs` from `afinfo`. */
   durationMs?: number;
 }
 
@@ -81,11 +81,11 @@ function buildCatalog(): Partial<Record<AudioCategory, AudioEntry[]>> {
   // Resolve audios.json relative to this module's source. Works in
   // `pnpm dev` (Astro/Vite) AND `pnpm start` (tsx resolves the same
   // way because the source path is preserved). Layout from this file:
-  //   src/lib/robi/audio-catalog.ts → project_root/sonidos/audios.json
+  //   src/lib/robi/audio-catalog.ts → project_root/assets/sonidos/audios.json
   //   Three levels up: here is /<root>/src/lib/robi/.
   const here = dirname(fileURLToPath(import.meta.url));
   const projectRoot = join(here, "..", "..", "..");
-  const jsonPath = join(projectRoot, "sonidos", "audios.json");
+  const jsonPath = join(projectRoot, "assets", "sonidos", "audios.json");
 
   const raw = readFileSync(jsonPath, "utf8");
   const parsed = JSON.parse(raw) as CatalogJson;
@@ -97,7 +97,7 @@ function buildCatalog(): Partial<Record<AudioCategory, AudioEntry[]>> {
       text: phrase.text,
       audioUrl: `/audio/${phrase.filename}`,
       // durationMs is optional in the JSON; the backfill script
-      // (`sonidos/durations.mjs`) populates it. Older audios.json
+      // (`assets/sonidos/durations.mjs`) populates it. Older audios.json
       // files without it will leave this undefined and the server
       // falls back to PREAMBLE_TO_CONTENT_DELAY_MS_DEFAULT.
       durationMs: phrase.durationMs,
