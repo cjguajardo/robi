@@ -433,7 +433,7 @@ Usado por: `RESET` (literal "Vuelvo al inicio.") y `ANSWER_QUESTION` (respuesta 
 
 ```ts
 export const SERVER_CONFIG = {
-  maxSteps: 10,            // cap superior para WALK_LEFT/RIGHT
+  maxSteps: 100,           // cap de comandos interpretados; UI conserva 1-10
   defaultSteps: 5,         // si no se menciona número
   llmFallbackEnabled: false, // deshabilitado por defecto (determinístico)
   speechEnabled: true,
@@ -449,6 +449,7 @@ export const SERVER_CONFIG = {
 |---|---|---|
 | `OPENAI_API_KEY` | requerido para STT/TTS/LLM | `src/lib/llm/answer-question.ts`, `src/lib/tts/synthesize.ts` |
 | `TTS_VOICE` | `fable` | `src/lib/tts/synthesize.ts` |
+| `DEFAULT_STEPS` | `5` | Pasos usados cuando se indica dirección sin cantidad |
 | `PORT` | 4321 | `server.mjs` |
 | `HOST` | 0.0.0.0 | `server.mjs` |
 

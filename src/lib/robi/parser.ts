@@ -5,8 +5,8 @@
 import type { RobiCommand } from "@/types/robi";
 import { FALLBACK_CONFIG } from "./commands";
 
-/** Spanish number words through the configured 10-step classroom cap. */
-const NUMBER_WORDS: Record<string, number> = {
+/** Spanish unit words used alone and after "treinta/cuarenta/... y". */
+const UNIT_WORDS: Record<string, number> = {
   cero: 0,
   un: 1,
   uno: 1,
@@ -19,17 +19,71 @@ const NUMBER_WORDS: Record<string, number> = {
   siete: 7,
   ocho: 8,
   nueve: 9,
+};
+
+/** Spanish number words that are expressed as one token. */
+const DIRECT_NUMBER_WORDS: Record<string, number> = {
+  ...UNIT_WORDS,
   diez: 10,
+  once: 11,
+  doce: 12,
+  trece: 13,
+  catorce: 14,
+  quince: 15,
+  dieciseis: 16,
+  diecisiete: 17,
+  dieciocho: 18,
+  diecinueve: 19,
+  veinte: 20,
+  veintiun: 21,
+  veintiuno: 21,
+  veintiuna: 21,
+  veintidos: 22,
+  veintitres: 23,
+  veinticuatro: 24,
+  veinticinco: 25,
+  veintiseis: 26,
+  veintisiete: 27,
+  veintiocho: 28,
+  veintinueve: 29,
+  cien: 100,
+};
+
+const TENS_WORDS: Record<string, number> = {
+  treinta: 30,
+  cuarenta: 40,
+  cincuenta: 50,
+  sesenta: 60,
+  setenta: 70,
+  ochenta: 80,
+  noventa: 90,
 };
 
 /** Try to extract a step count from the transcript, otherwise return default. */
 function extractSteps(text: string, fallback: number): number {
-  // Digits first — "tres pasos" is common, but "3 pasos" must also work.
-  const digitMatch = text.match(/\b(\d{1,2})\b/);
+  // Digits first. The validator owns the upper bound, so the parser must
+  // preserve the spoken value instead of silently falling back on 3+ digits.
+  const digitMatch = text.match(/\b(\d+)\b/);
   if (digitMatch) return Number(digitMatch[1]);
 
-  for (const [word, value] of Object.entries(NUMBER_WORDS)) {
-    if (new RegExp(`\\b${word}\\b`).test(text)) return value;
+  const words = text.split(/\s+/);
+  for (let index = 0; index < words.length; index += 1) {
+    const word = words[index];
+    if (!word) continue;
+
+    const direct = DIRECT_NUMBER_WORDS[word];
+    if (direct !== undefined) return direct;
+
+    const tens = TENS_WORDS[word];
+    if (tens === undefined) continue;
+
+    const connector = words[index + 1];
+    const unitWord = words[index + 2];
+    const unit = unitWord ? UNIT_WORDS[unitWord] : undefined;
+    if (connector === "y" && unit !== undefined && unit > 0) {
+      return tens + unit;
+    }
+    return tens;
   }
   return fallback;
 }

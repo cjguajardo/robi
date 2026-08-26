@@ -449,6 +449,19 @@ function isActionCommand(cmd: RobiCommand): boolean {
   }
 }
 
+/**
+ * Commands whose audio is a movement cue rather than spoken dialogue.
+ * Their audio lifecycle still unblocks the command queue, but it must
+ * never replace the visible movement track with the speaking sprite.
+ */
+function isMovementCommand(cmd: RobiCommand): boolean {
+  return (
+    cmd.type === "WALK_LEFT" ||
+    cmd.type === "WALK_RIGHT" ||
+    cmd.type === "JUMP"
+  );
+}
+
 /** Apply a non-command world event (pause, resume, reset). */
 export function ingestWorldEvent(
   event: "PAUSE" | "RESUME" | "RESET"
@@ -741,11 +754,11 @@ function waitForSpeechEnded(expectedDurationMs?: number): Promise<void> {
 export function ingestSpeechEvent(type: "SPEECH_STARTED" | "SPEECH_ENDED"): void {
   switch (type) {
     case "SPEECH_STARTED":
-      // JUMP uses its audio as an effort sound, not spoken dialogue.
-      // Keep EXECUTING so the jumping sprite remains visible while the
-      // mp3 plays. Every other command keeps the normal mouth-moving
-      // SPEAKING behavior.
-      if (state.lastCommand?.type !== "JUMP") {
+      // Walking and jumping use audio as movement cues, not spoken
+      // dialogue. Keep EXECUTING so the movement sprite remains visible
+      // for the whole displacement / jump while the mp3 plays. Every
+      // non-movement command keeps the normal mouth-moving behavior.
+      if (!state.lastCommand || !isMovementCommand(state.lastCommand)) {
         transition({ type: "SPEAK" });
       }
       break;

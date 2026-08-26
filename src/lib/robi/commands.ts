@@ -38,17 +38,22 @@ export const QUICK_COMMANDS: RobiCommandType[] = [
   "RESET",
 ];
 
+/** Maximum exposed by the compact keypad on /control. */
+export const MAX_CONTROL_STEPS = 10;
+
+/** Maximum accepted from interpreted commands, including microphone input. */
+export const MAX_COMMAND_STEPS = 100;
+
 /**
  * Client-side fallback config. Hardcoded — must NOT read env.
  *
  * Used by UI components (e.g. StepPicker) for rendering defaults before
- * the server's authoritative config arrives. The server validates against
- * its own env-derived config (SERVER_CONFIG in `config.server.ts`), so a
- * drift here is harmless: a step count above the server's max will be
- * clamped on validation.
+ * the server's authoritative config arrives. The server accepts a wider
+ * command range, while this client config intentionally keeps the manual
+ * keypad compact.
  */
 export const FALLBACK_CONFIG: RobiConfig = {
-  maxSteps: 10,
+  maxSteps: MAX_CONTROL_STEPS,
   defaultSteps: 5,
   llmFallbackEnabled: false,
 };
@@ -59,8 +64,8 @@ export const FALLBACK_CONFIG: RobiConfig = {
  * /display stage transform and the server's per-step animation budget.
  *
  * Why 64px: big enough that 1-step moves are visible from across a
- * classroom, small enough that 10 steps (the MAX_STEPS cap) stay on
- * screen even at modest projector resolutions.
+ * classroom. The manual control intentionally stays at 10 steps even
+ * though an explicit voice command can request up to 100.
  */
 export const BLOCK_PX = 64;
 

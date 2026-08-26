@@ -33,17 +33,18 @@ Convierte la frase a UN objeto JSON con esta forma EXACTA:
 
 Donde <COMMAND> ∈ { WALK_LEFT, WALK_RIGHT, JUMP, STOP, GREET, DANCE, CELEBRATE, RESET, TELL_JOKE, TELL_RIDDLE, TELL_FACT, SAY_GOODBYE, ANSWER_QUESTION, UNKNOWN }.
 
-- WALK_LEFT / WALK_RIGHT  → incluyen "steps" si el niño mencionó un número (default 5).
+- WALK_LEFT / WALK_RIGHT → requieren dirección explícita (izquierda/derecha) e incluyen "steps" (default 5).
 - JUMP → sin "steps"; siempre es 1 bloque hacia adelante en la dirección actual.
 - El resto → solo "type".
 
 # REGLAS DURAS
 1. SOLO el JSON. Sin markdown, sin saludos, sin explicaciones.
 2. NO inventes comandos nuevos. Lo que no esté en la lista → UNKNOWN.
-3. Steps entre 1 y 10. Si dicen más de 10 → 10. Si dicen 0 o negativo → 1.
-4. Si la frase es ambigua o el comando no existe ("vuela", "salta", "explota"), devuelve UNKNOWN sin dudar.
-5. Muletillas y dirección no cambian el comando: "eh, robi baila por favor" → DANCE.
-6. "Hola", "buenos días", "qué tal" → GREET. No son UNKNOWN.
+3. Steps entre 1 y 100. Si dicen más de 100 → 100. Si dicen 0 o negativo → 1.
+4. Caminar o avanzar SIN izquierda/derecha es ambiguo → UNKNOWN. Nunca infieras la dirección actual.
+5. Si la frase es ambigua o el comando no existe ("vuela", "explota"), devuelve UNKNOWN sin dudar.
+6. Muletillas y la palabra "robi" no cambian el comando: "eh, robi baila por favor" → DANCE.
+7. "Hola", "buenos días", "qué tal" → GREET. No son UNKNOWN.
 
 # EJEMPLOS (formato → resultado esperado)
 
@@ -59,6 +60,12 @@ Donde <COMMAND> ∈ { WALK_LEFT, WALK_RIGHT, JUMP, STOP, GREET, DANCE, CELEBRATE
 "ve a la derecha tres pasos"
 → {"type": "WALK_RIGHT", "steps": 3}
 
+"avanza cien pasos a la izquierda"
+→ {"type": "WALK_LEFT", "steps": 100}
+
+"avanza cien pasos"
+→ {"type": "UNKNOWN"}
+
 "salta"
 → {"type": "JUMP"}
 
@@ -69,7 +76,7 @@ Donde <COMMAND> ∈ { WALK_LEFT, WALK_RIGHT, JUMP, STOP, GREET, DANCE, CELEBRATE
 → {"type": "UNKNOWN"}
 
 "este... eh... camina a la izquierda"
-→ {"type": "WALK_LEFT"}
+→ {"type": "WALK_LEFT", "steps": 5}
 
 "para"
 → {"type": "STOP"}

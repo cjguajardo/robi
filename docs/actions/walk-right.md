@@ -43,7 +43,7 @@ flowchart LR
 { type: "WALK_RIGHT"; steps: number }
 ```
 
-`steps`: entero en `[1, 10]`.
+`steps`: entero en `[1, 100]` para voz; el selector manual permanece en `[1, 10]`. La dirección derecha debe estar explícita.
 
 ## Disparador
 
@@ -67,12 +67,16 @@ Idénticos a [WALK_LEFT](./walk-left.md#disparador).
 - **Archivos**: `public/audio/walk-right-01.mp3` (1 sola entrada).
 - **Texto de muestra**: "¡A la derecha!"
 
+Como en `WALK_LEFT`, el MP3 acompaña el movimiento sin cambiar la pose:
+`SPEECH_STARTED` mantiene `EXECUTING`, el sprite permanece en `walking`
+durante todo el desplazamiento y nunca entra en `speaking`.
+
 ## State machine
 
 | T | Event | Reducer | Sprite |
 |---|---|---|---|
 | 0 | `EXECUTE {command: WALK_RIGHT, steps}` | `EXECUTING`, `direction = EAST`, `pendingMove = {x: +steps, y: 0}` | `walking` |
-| 0 | `APPLY_MOVEMENT` + `SAY` | `EXECUTING`, `position.x += steps` | `walking` + audio |
+| 0 | `APPLY_MOVEMENT` + `SAY` | `EXECUTING`, `position.x += steps`; `SPEECH_STARTED` no cambia el estado | `walking` + audio, nunca `speaking` |
 | max(audio, move) | `COMPLETE` | `IDLE` | `idle` |
 
 `actionAnimationMs(WALK_RIGHT) = max(400, steps * 350)` ms (idéntico a WALK_LEFT).

@@ -13,15 +13,19 @@
 // server-only intent explicit and prevents accidental client imports.
 
 import type { RobiConfig } from "@/types/robi";
-import { FALLBACK_CONFIG } from "./commands";
+import { FALLBACK_CONFIG, MAX_COMMAND_STEPS } from "./commands";
 
 /**
- * Authoritative runtime config. Built once at server startup from
- * environment variables, falling back to FALLBACK_CONFIG when unset.
+ * Authoritative runtime config. Combines fixed product invariants with
+ * environment-backed defaults, and is built once at server startup.
  * Treat as immutable — pass it around, don't mutate.
  */
 export const SERVER_CONFIG: RobiConfig = {
-  maxSteps: Number(process.env.MAX_STEPS ?? FALLBACK_CONFIG.maxSteps),
+  // Product invariant: interpreted movement supports the complete 1-100
+  // range. This is intentionally not environment-configurable; a stale
+  // MAX_STEPS=5 deployment previously truncated valid voice commands
+  // while the walking sprite kept playing for the requested duration.
+  maxSteps: MAX_COMMAND_STEPS,
   defaultSteps: Number(process.env.DEFAULT_STEPS ?? FALLBACK_CONFIG.defaultSteps),
   llmFallbackEnabled:
     String(process.env.LLM_FALLBACK_ENABLED ?? "false") === "true",

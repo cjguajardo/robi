@@ -916,7 +916,7 @@ Ejemplo:
 
 ```ts
 export const config = {
-  maxSteps: 10,
+  maxSteps: 100, // comandos interpretados; keypad manual conserva 1-10
   defaultSteps: 5,
   speechEnabled: true,
   ttsEnabled: true,

@@ -556,20 +556,37 @@ describe("audio lifecycle events (SPEECH_STARTED / SPEECH_ENDED)", () => {
     detachPeer(handle);
   });
 
-  it("JUMP keeps the jumping state while its sound plays", () => {
+  it.each([
+    {
+      command: { type: "WALK_LEFT", steps: 1 } as const,
+      audioPrefix: "/audio/walk-left-",
+    },
+    {
+      command: { type: "WALK_RIGHT", steps: 1 } as const,
+      audioPrefix: "/audio/walk-right-",
+    },
+    {
+      command: { type: "JUMP" } as const,
+      audioPrefix: "/audio/jump-",
+    },
+  ])("$command.type keeps its movement state while its sound plays", ({
+    command,
+    audioPrefix,
+  }) => {
     const { events, handle } = makePeer();
     attachPeer(handle);
     events.length = 0;
 
-    ingestCommand({ type: "JUMP" });
+    ingestCommand(command);
 
     const commandIndex = events.findIndex(
-      (event) => event.type === "COMMAND" && event.payload.type === "JUMP",
+      (event) =>
+        event.type === "COMMAND" && event.payload.type === command.type,
     );
     const sayIndex = events.findIndex(
       (event) =>
         event.type === "SAY" &&
-        event.payload.audioUrl?.startsWith("/audio/jump-") === true,
+        event.payload.audioUrl?.startsWith(audioPrefix) === true,
     );
     expect(commandIndex).toBeGreaterThanOrEqual(0);
     expect(sayIndex).toBeGreaterThan(commandIndex);

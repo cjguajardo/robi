@@ -11,6 +11,21 @@ describe("parser", () => {
     expect(parseCommand("ve a la derecha diez pasos")).toEqual({ type: "WALK_RIGHT", steps: 10 });
   });
 
+  it("preserves explicit directional step counts through 100", () => {
+    expect(parseCommand("avanza 100 pasos a la derecha")).toEqual({
+      type: "WALK_RIGHT",
+      steps: 100,
+    });
+    expect(parseCommand("camina cien pasos hacia la izquierda")).toEqual({
+      type: "WALK_LEFT",
+      steps: 100,
+    });
+    expect(parseCommand("avanza treinta y siete pasos a la derecha")).toEqual({
+      type: "WALK_RIGHT",
+      steps: 37,
+    });
+  });
+
   it("returns UNKNOWN for 'gira' / 'voltea' (turns removed)", () => {
     // ROBI no longer rotates in place — only lateral walk and jump.
     expect(parseCommand("gira a la izquierda")).toEqual({
@@ -50,6 +65,10 @@ describe("parser", () => {
     expect(parseCommand("robi retrocede dos pasos")).toEqual({
       type: "UNKNOWN",
       raw: "robi retrocede dos pasos",
+    });
+    expect(parseCommand("camina cien pasos")).toEqual({
+      type: "UNKNOWN",
+      raw: "camina cien pasos",
     });
   });
 

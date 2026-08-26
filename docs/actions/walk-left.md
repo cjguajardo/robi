@@ -43,7 +43,9 @@ flowchart LR
 { type: "WALK_LEFT"; steps: number }
 ```
 
-`steps`: entero en `[1, 10]`. Ver [references.md §6 Configuración](../references.md#6-configuracion).
+`steps`: entero en `[1, 100]` para comandos interpretados por voz. El
+selector manual de `/control` permanece intencionalmente en `[1, 10]`.
+Ver [references.md §6 Configuración](../references.md#6-configuracion).
 
 ## Disparador
 
@@ -59,19 +61,20 @@ flowchart LR
 
 ### LLM fallback
 
-`src/lib/llm/system-prompt.ts` puede devolver `WALK_LEFT` cuando el parser local devuelve `UNKNOWN`. Schema: `{type: "WALK_LEFT", steps: 1-10}`. Model: `gpt-4o-mini`.
+`src/lib/llm/system-prompt.ts` puede devolver `WALK_LEFT` cuando el parser local devuelve `UNKNOWN`. Schema: `{type: "WALK_LEFT", steps: 1-100}`. Model: `gpt-4o-mini`. Sin dirección explícita debe devolver `UNKNOWN`.
 
 ### Validación
 
-`src/lib/robi/validator.ts` — `clamp(steps, 1, 10)`. Inputs fuera de rango se clampean. Si steps ≤ 0 → 1.
+`src/lib/robi/validator.ts` — `clamp(steps, 1, 100)` con la configuración del servidor. Inputs fuera de rango se clampean. Si steps ≤ 0 → 1.
 
 ### `extractSteps()` (`parser.ts:24-33`)
 
-1. Busca `\b(\d{1,2})\b` → número entero.
-2. Si no, busca palabras (`uno/un/una`=1, `dos`=2, …, `diez`=10).
+1. Busca `\b(\d+)\b` → número entero; el validator aplica el máximo.
+2. Si no, interpreta palabras españolas desde `uno` hasta `cien`, incluidas formas compuestas como `treinta y siete`.
 3. Si nada matchea → `defaultSteps` (= 5).
 
-Si la frase dice "diez pasos" → `clamp(10, 1, 10)` = 10.
+La dirección es obligatoria: `"avanza cien pasos a la izquierda"` produce
+`WALK_LEFT(100)`, pero `"avanza cien pasos"` produce `UNKNOWN`.
 
 ## Audio
 
@@ -81,12 +84,16 @@ Si la frase dice "diez pasos" → `clamp(10, 1, 10)` = 10.
 - **Rotación**: counter siempre 0 (1 sola entry).
 - **Texto de muestra**: "¡A la izquierda!" (de `sonidos/audios.json`).
 
+El MP3 es una pista de movimiento, no una orden para cambiar de pose:
+`SPEECH_STARTED` mantiene `EXECUTING`. El audio suena mientras ROBI se
+desplaza y el sprite permanece en `walking`; nunca entra en `speaking`.
+
 ## State machine
 
 | T | Event | Reducer | Sprite |
 |---|---|---|---|
 | 0 | `EXECUTE {command: WALK_LEFT, steps}` | `EXECUTING`, `direction = WEST`, `pendingMove = {x: -steps, y: 0}` | `walking` (track) |
-| 0 | `APPLY_MOVEMENT` + `SAY` | `EXECUTING`, `position.x -= steps` | `walking` + audio |
+| 0 | `APPLY_MOVEMENT` + `SAY` | `EXECUTING`, `position.x -= steps`; `SPEECH_STARTED` no cambia el estado | `walking` + audio, nunca `speaking` |
 | max(audio, move) | `COMPLETE` | `IDLE` | `idle` |
 
 `actionAnimationMs(WALK_LEFT) = max(400, steps * 350)` ms.
@@ -149,7 +156,7 @@ Si WALK_LEFT se comporta raro:
 | La direction cambia pero la posición no | El display no está viendo el segundo `WORLD_CHANGED`. Verificar que `pendingMove` no se dropeó. Ver `src/lib/realtime/server.ts:268-277`. |
 | Avatar anima pero no avanza mientras habla | `APPLY_MOVEMENT` quedó después de `await waiter`; debe emitirse antes para solapar voz y desplazamiento. |
 | El visual delay es demasiado corto/largo | `src/lib/realtime/server.ts:actionAnimationMs()` — ajustar la fórmula `steps * 350`. |
-| Steps > 10 aceptado | Validator: `src/lib/robi/validator.ts`. Schema no clampea correctamente. |
+| Steps > 100 aceptado | Validator: `src/lib/robi/validator.ts`. Schema no clampea correctamente. |
 | Audio no suena | `public/audio/walk-left-01.mp3` no existe, o audios:install no se corrió. Ver `pnpm audios:install`. |
 
 ## Puntos de tweak
@@ -157,7 +164,7 @@ Si WALK_LEFT se comporta raro:
 | Querés cambiar... | Archivo:línea | Notas |
 |---|---|---|
 | Velocidad de la animación visible | `src/lib/realtime/server.ts:actionAnimationMs()` → fórmula `Math.max(400, steps * 350)` | Constante 350ms por step; mínimo 400ms (1 step). |
-| Cap de steps (1-10) | `src/lib/robi/config.server.ts` → `maxSteps` | Cambia acá, no hardcodear. |
+| Cap de voz (1-100) | `src/lib/robi/commands.ts` → `MAX_COMMAND_STEPS` | Invariante del producto; no cambia el keypad manual 1-10. |
 | Steps default | `src/lib/robi/config.server.ts` → `defaultSteps` | Si la frase no menciona número. |
 | Texto que dice | `sonidos/audios.json` (cambiar `text`) + regenerar con `pnpm audios` | El text en el código viene del catálogo cargado. |
 | Audio URL | `sonidos/audios/walk-left-NN.mp3` + `pnpm audios:install` | Regenerar y copiar a `public/audio/`. |

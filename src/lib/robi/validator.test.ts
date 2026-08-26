@@ -1,10 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { validateCommand } from "./validator";
-import { FALLBACK_CONFIG } from "./commands";
+import {
+  FALLBACK_CONFIG,
+  MAX_COMMAND_STEPS,
+  MAX_CONTROL_STEPS,
+} from "./commands";
 
 describe("validator", () => {
   it("uses the classroom movement defaults", () => {
     expect(FALLBACK_CONFIG).toMatchObject({ defaultSteps: 5, maxSteps: 10 });
+  });
+
+  it("keeps the manual selector compact while commands support 100 steps", () => {
+    expect(MAX_CONTROL_STEPS).toBe(10);
+    expect(MAX_COMMAND_STEPS).toBe(100);
+    expect(
+      validateCommand(
+        { type: "WALK_RIGHT", steps: 100 },
+        { ...FALLBACK_CONFIG, maxSteps: MAX_COMMAND_STEPS },
+      ),
+    ).toEqual({
+      ok: true,
+      command: { type: "WALK_RIGHT", steps: 100 },
+    });
   });
 
   it("clamps WALK_LEFT steps to maxSteps (PRD RF-008)", () => {
