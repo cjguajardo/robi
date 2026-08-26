@@ -544,10 +544,66 @@
     "040-transformer"
   ];
 
-  global.ROBI_FACTS = Object.freeze(facts.map((fact, index) => Object.freeze({
-    ...fact,
-    title: shortTitles[index],
-    fact: shortFacts[index],
-    imageUrl: `./images/facts/${imageNames[index]}.png`
-  })));
+  const illustrationRareCards = [
+    {
+      id: "IR01",
+      kind: "illustration-rare",
+      year: "2026",
+      category: "Ingeniería",
+      rarity: "Illustration Rare",
+      title: "Hard Debugging",
+      fact: "Busca un error difícil con calma y atención.",
+      imageUrl: "./images/rare/041-hard-debugging.png"
+    },
+    {
+      id: "IR02",
+      kind: "illustration-rare",
+      year: "2026",
+      category: "Programación",
+      rarity: "Illustration Rare",
+      title: "Coding Illumination",
+      fact: "Programa concentrado mientras transforma ideas en código.",
+      imageUrl: "./images/rare/042-coding-illumination.png"
+    },
+    {
+      id: "IR03",
+      kind: "illustration-rare",
+      year: "2026",
+      category: "Ingeniería",
+      rarity: "Illustration Rare",
+      title: "Deploy to Production",
+      fact: "Publica cambios cuando todas las pruebas están listas.",
+      imageUrl: "./images/rare/043-deploy-production.png"
+    },
+    {
+      id: "IR04",
+      kind: "illustration-rare",
+      year: "2026",
+      category: "Programación",
+      rarity: "Illustration Rare",
+      title: "Fancy Testing",
+      fact: "Comprueba que cada parte funcione como esperaba.",
+      imageUrl: "./images/rare/044-fancy-testing.png"
+    },
+    {
+      id: "IR05",
+      kind: "illustration-rare",
+      year: "2026",
+      category: "Ingeniería",
+      rarity: "Illustration Rare",
+      title: "Hands to Work",
+      fact: "Prepara sus herramientas antes de comenzar a programar.",
+      imageUrl: "./images/rare/045-hands-work.png"
+    }
+  ];
+
+  global.ROBI_FACTS = Object.freeze([
+    ...facts.map((fact, index) => Object.freeze({
+      ...fact,
+      title: shortTitles[index],
+      fact: shortFacts[index],
+      imageUrl: `./images/facts/${imageNames[index]}.png`
+    })),
+    ...illustrationRareCards.map(Object.freeze)
+  ]);
 })(globalThis);

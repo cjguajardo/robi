@@ -52,18 +52,28 @@
     const card = template.content.firstElementChild.cloneNode(true);
     const illustration = card.querySelector(".card-illustration");
     const isAlphabetCard = item.kind === "alphabet";
+    const isIllustrationRare = item.kind === "illustration-rare";
 
     card.classList.add(`category-${slugify(item.category)}`);
     card.classList.toggle("fact-card--alphabet", isAlphabetCard);
+    card.classList.toggle("fact-card--illustration-rare", isIllustrationRare);
     card.dataset.category = item.category;
-    card.querySelector(".fact-card__number").textContent = isAlphabetCard ? item.id : `N.º ${String(item.id).padStart(2, "0")}`;
-    card.querySelector(".fact-card__category").textContent = item.category.toUpperCase();
+    card.querySelector(".fact-card__number").textContent = isAlphabetCard || isIllustrationRare
+      ? item.id
+      : `N.º ${String(item.id).padStart(2, "0")}`;
+    card.querySelector(".fact-card__category").textContent = isIllustrationRare
+      ? item.rarity.toUpperCase()
+      : item.category.toUpperCase();
     card.querySelector(".fact-card__year").textContent = isAlphabetCard ? item.letter : item.year;
     card.querySelector(".alphabet-letter").textContent = isAlphabetCard ? item.letter : "";
-    card.querySelector(".fact-card__label").textContent = isAlphabetCard ? "QUIERE DECIR" : "DATO";
+    card.querySelector(".fact-card__label").textContent = isAlphabetCard
+      ? "QUIERE DECIR"
+      : isIllustrationRare ? "ACCIÓN" : "DATO";
     card.querySelector(".fact-card__title").textContent = isAlphabetCard ? item.word : item.title;
     card.querySelector(".fact-card__fact").textContent = isAlphabetCard ? item.meaning : item.fact;
-    card.querySelector(".fact-card__brand").textContent = isAlphabetCard ? "ROBI ABC" : "ROBI SABE";
+    card.querySelector(".fact-card__brand").textContent = isAlphabetCard
+      ? "ROBI ABC"
+      : isIllustrationRare ? "ROBI IR" : "ROBI SABE";
 
     illustration.src = item.imageUrl;
     illustration.alt = isAlphabetCard
@@ -71,7 +81,7 @@
       : `ROBI ilustra: ${item.title}`;
 
     const source = card.querySelector(".fact-card__source");
-    if (isAlphabetCard) {
+    if (isAlphabetCard || isIllustrationRare) {
       source.remove();
     } else {
       source.href = item.sourceUrl;

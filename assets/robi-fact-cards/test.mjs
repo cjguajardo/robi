@@ -14,22 +14,48 @@ const cardBacks = [
   "./images/backs/robi-card-back-circuit-core.png",
   "./images/backs/robi-card-back-digital-portal.png"
 ];
+const rareCards = facts.filter(({ kind }) => kind === "illustration-rare");
 
 assert.ok(Array.isArray(facts), "ROBI_FACTS debe ser un arreglo");
-assert.ok(facts.length >= 35, "La colección debe incluir al menos 35 láminas");
+assert.equal(facts.length, 45, "La colección debe incluir 40 curiosidades y 5 cartas Illustration Rare");
 assert.equal(new Set(facts.map(({ id }) => id)).size, facts.length, "Cada lámina debe tener un id único");
 
 for (const fact of facts) {
-  for (const field of ["year", "category", "title", "fact", "source", "sourceUrl", "imageUrl"]) {
+  const isRare = fact.kind === "illustration-rare";
+  for (const field of ["year", "category", "title", "fact", "imageUrl"]) {
     assert.ok(fact[field], `La lámina ${fact.id} debe definir ${field}`);
   }
 
-  assert.match(fact.sourceUrl, /^https:\/\//, `La fuente de la lámina ${fact.id} debe usar HTTPS`);
+  if (isRare) {
+    assert.equal(fact.rarity, "Illustration Rare");
+    assert.match(fact.imageUrl, /^\.\/images\/rare\/.+\.png$/, `La lámina ${fact.id} debe usar arte Illustration Rare`);
+  } else {
+    for (const field of ["source", "sourceUrl"]) {
+      assert.ok(fact[field], `La lámina ${fact.id} debe definir ${field}`);
+    }
+    assert.match(fact.sourceUrl, /^https:\/\//, `La fuente de la lámina ${fact.id} debe usar HTTPS`);
+    assert.match(fact.imageUrl, /^\.\/images\/facts\/.+\.png$/, `La lámina ${fact.id} debe usar una imagen individual`);
+  }
+
   assert.ok(fact.title.split(/\s+/).length <= 4, `El título de la lámina ${fact.id} debe tener hasta 4 palabras`);
   assert.ok(fact.fact.split(/\s+/).length <= 11, `El texto de la lámina ${fact.id} debe tener hasta 11 palabras`);
   assert.ok(fact.fact.length <= 75, `El texto de la lámina ${fact.id} debe ser corto`);
-  assert.match(fact.imageUrl, /^\.\/images\/facts\/.+\.png$/, `La lámina ${fact.id} debe usar una imagen individual`);
   await access(new URL(fact.imageUrl, import.meta.url));
+}
+
+assert.equal(rareCards.length, 5, "Deben existir cinco cartas Illustration Rare");
+assert.deepEqual(rareCards.map(({ title }) => title), [
+  "Hard Debugging",
+  "Coding Illumination",
+  "Deploy to Production",
+  "Fancy Testing",
+  "Hands to Work"
+]);
+
+for (const card of rareCards) {
+  const png = await readFile(new URL(card.imageUrl, import.meta.url));
+  assert.equal(png.readUInt32BE(16), 732, `${card.id} debe tener 732 px de ancho`);
+  assert.equal(png.readUInt32BE(20), 1020, `${card.id} debe tener 1020 px de alto`);
 }
 
 const expectedLetters = [..."ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"];
@@ -50,18 +76,20 @@ for (const card of alphabet) {
   await access(new URL(card.imageUrl, import.meta.url));
 }
 
-assert.equal(facts.length + alphabet.length, 67, "La colección completa debe tener 67 láminas");
-assert.equal(new Set([...facts, ...alphabet].map(({ imageUrl }) => imageUrl)).size, 67, "Cada lámina debe tener una imagen diferente");
+assert.equal(facts.length + alphabet.length, 72, "La colección completa debe tener 72 láminas");
+assert.equal(new Set([...facts, ...alphabet].map(({ imageUrl }) => imageUrl)).size, 72, "Cada lámina debe tener una imagen diferente");
 
 assert.match(html, /card-illustration/);
 assert.match(html, /href="\.\/print-backs\.html"/);
 assert.doesNotMatch(html, /sticker-sprite|sticker-viewport/);
 assert.match(html, /alphabet\.js/);
 assert.match(html, /aria-live="polite"/);
+assert.match(html, />72<\/strong>/);
 assert.match(app, /CARDS_PER_SHEET\s*=\s*9/);
+assert.match(app, /isIllustrationRare/);
 assert.match(app, /print-sheet/);
 assert.doesNotMatch(app, /sticker-sprite|spriteIndex/);
-assert.match(app, /if \(isAlphabetCard\) \{\s*source\.remove\(\)/, "Las tarjetas ROBI ABC no deben mostrar una edad");
+assert.match(app, /if \(isAlphabetCard \|\| isIllustrationRare\) \{\s*source\.remove\(\)/, "Las tarjetas ABC e Illustration Rare no deben mostrar una fuente");
 assert.doesNotMatch(`${app}\n${html}\n${alphabet.map(JSON.stringify).join("\n")}`, /6[–-]7 años/);
 assert.match(css, /\.print-sheet/);
 assert.match(css, /grid-template-columns:\s*repeat\(3/);
@@ -87,5 +115,7 @@ assert.equal((backPrintHtml.match(/src="\.\/images\/backs\/robi-card-back-circui
 assert.doesNotMatch(backPrintHtml, /robi-card-back-digital-portal\.png/);
 assert.match(backPrintHtml, /window\.print\(\)/);
 assert.match(css, /\.card-back__image\s*{/);
+assert.match(css, /\.fact-card--illustration-rare/);
+assert.match(css, /@media print[\s\S]*?\.fact-card--illustration-rare \.fact-card__frame\s*{[^}]*box-shadow:\s*none;/, "Las cartas Illustration Rare no deben invadir el espacio de corte al imprimir");
 
 console.log(`OK: ${facts.length + alphabet.length} láminas verificadas (${alphabet.length} del abecedario)`);

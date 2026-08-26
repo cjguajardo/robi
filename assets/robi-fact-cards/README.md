@@ -1,6 +1,6 @@
 # ROBI · Curiosidades Tech
 
-Plantilla HTML autónoma con 67 láminas coleccionables educativas: 27 del abecedario español para niños de 6 a 7 años y 40 sobre programación, ingeniería de software, historia de la computación y temas relacionados.
+Plantilla HTML autónoma con 72 láminas coleccionables educativas: 27 del abecedario español, 40 curiosidades sobre tecnología y 5 cartas Illustration Rare con acciones de ingeniería de software.
 
 Los títulos usan hasta cuatro palabras. Cada explicación expresa una sola idea con un máximo de once palabras, para acompañar a niños que comienzan a leer.
 
@@ -22,6 +22,7 @@ Abre `index.html` en un navegador moderno. La colección permite:
 - `facts.js`: contenido, fuente, tema e imagen de cada lámina histórica.
 - `images/alphabet/`: 27 ilustraciones individuales del abecedario.
 - `images/facts/`: 40 ilustraciones individuales de curiosidades tecnológicas.
+- `images/rare/`: 5 pinturas de acuarela para las cartas Illustration Rare.
 - `images/backs/`: dos reversos coleccionables de ROBI, preparados en proporción 61:85.
 - `styles.css`: sistema visual, colores por categoría y reglas de impresión.
 - `app.js`: render, filtros y acción de impresión.

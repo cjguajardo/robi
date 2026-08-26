@@ -444,6 +444,86 @@ button {
   --accent-soft: #fff0b5;
 }
 
+.fact-card--illustration-rare {
+  --accent: #f6d36c;
+  --accent-dark: #fff1a6;
+  --accent-soft: #071526;
+}
+
+.fact-card--illustration-rare .fact-card__frame {
+  display: block;
+  border: 0;
+  background: #071526;
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 2px rgba(255, 236, 158, 0.7);
+}
+
+.fact-card--illustration-rare .fact-card__visual {
+  position: absolute;
+  inset: 0;
+  border: 0;
+}
+
+.fact-card--illustration-rare .fact-card__header {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
+  color: #fff;
+  border: 0;
+  background: linear-gradient(rgba(2, 9, 20, 0.82), rgba(2, 9, 20, 0.08));
+}
+
+.fact-card--illustration-rare .fact-card__category {
+  color: #fff1a6;
+}
+
+.fact-card--illustration-rare .fact-card__year {
+  color: #142038;
+  background: #ffe486;
+  box-shadow: 0 0 14px rgba(255, 228, 134, 0.55);
+}
+
+.fact-card--illustration-rare .fact-card__content {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: clamp(28px, 9cqw, 36px);
+  left: 0;
+  padding: clamp(32px, 12cqw, 46px) clamp(14px, 5.4cqw, 22px) clamp(9px, 3.4cqw, 13px);
+  color: #fff;
+  background: linear-gradient(transparent, rgba(2, 9, 20, 0.95) 58%);
+}
+
+.fact-card--illustration-rare .fact-card__label {
+  color: #201600;
+  border-left-color: #ffe486;
+  background: #ffe486;
+}
+
+.fact-card--illustration-rare .fact-card__title {
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.fact-card--illustration-rare .fact-card__fact {
+  color: #edf7ff;
+  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.95);
+}
+
+.fact-card--illustration-rare .fact-card__footer {
+  position: absolute;
+  z-index: 4;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  color: #ffe486;
+  border: 0;
+  background: rgba(2, 9, 20, 0.94);
+}
+
 .fact-card__frame {
   position: relative;
   display: grid;
@@ -876,6 +956,10 @@ button {
     border-radius: 3.5mm;
     box-shadow: none;
     transform: none;
+  }
+
+  .fact-card--illustration-rare .fact-card__frame {
+    box-shadow: none;
   }
 
   .fact-card__header {
