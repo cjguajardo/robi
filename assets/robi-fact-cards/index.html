@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="67 láminas coleccionables de ROBI con el abecedario y curiosidades verificadas sobre programación, ingeniería de software, historia y tecnología.">
+    <title>ROBI · Aprende jugando</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./facts.js" defer></script>
+    <script src="./alphabet.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#coleccion">Saltar a la colección</a>
+
+    <header class="hero">
+      <div class="hero__glow hero__glow--one" aria-hidden="true"></div>
+      <div class="hero__glow hero__glow--two" aria-hidden="true"></div>
+
+      <div class="shell hero__inner">
+        <div class="brand-lockup">
+          <span class="brand-lockup__eyebrow">APRENDE CON ROBI</span>
+          <h1><span>ROBI</span> · APRENDE JUGANDO</h1>
+          <p>Letras, palabras y datos simples.</p>
+        </div>
+
+        <div class="hero__actions">
+          <div class="collection-count" aria-label="Cantidad total de láminas">
+            <strong id="total-count">67</strong>
+            <span>LÁMINAS</span>
+          </div>
+          <button class="print-button" id="print-button" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/>
+            </svg>
+            Imprimir hojas
+          </button>
+          <a class="print-button print-button--secondary" href="./print-backs.html">Imprimir reversos</a>
+        </div>
+      </div>
+    </header>
+
+    <main id="coleccion">
+      <section class="toolbar" aria-label="Controles de la colección">
+        <div class="shell toolbar__inner">
+          <div class="filters" id="filters" aria-label="Filtrar por tema"></div>
+          <p class="result-count" id="result-count" aria-live="polite">67 láminas · 8 hojas A4</p>
+        </div>
+      </section>
+
+      <section class="collection shell" aria-labelledby="collection-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-heading__kicker">LETRAS Y DATOS</span>
+            <h2 id="collection-title">Elige una tarjeta.</h2>
+          </div>
+          <p>Lee. Mira. Aprende.</p>
+        </div>
+
+        <div class="sheet-stack" id="cards"></div>
+
+        <noscript>
+          <p class="noscript-message">Activa JavaScript para ver las tarjetas.</p>
+        </noscript>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell site-footer__inner">
+        <div>
+          <strong>ROBI · APRENDE JUGANDO</strong>
+          <p>Aprender puede ser divertido.</p>
+        </div>
+        <p class="print-hint">Al imprimir, activa los gráficos de fondo.</p>
+      </div>
+    </footer>
+
+    <template id="fact-card-template">
+      <article class="fact-card" role="listitem">
+        <div class="fact-card__frame">
+          <header class="fact-card__header">
+            <span class="fact-card__number"></span>
+            <span class="fact-card__category"></span>
+            <span class="fact-card__year"></span>
+          </header>
+
+          <div class="fact-card__visual">
+            <span class="alphabet-letter"></span>
+            <img class="card-illustration" alt="">
+          </div>
+
+          <div class="fact-card__content">
+            <span class="fact-card__label">DATO</span>
+            <h3 class="fact-card__title"></h3>
+            <p class="fact-card__fact"></p>
+          </div>
+
+          <footer class="fact-card__footer">
+            <span class="fact-card__brand">ROBI SABE</span>
+            <a class="fact-card__source" target="_blank" rel="noreferrer">
+              <span class="source-label"></span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </a>
+          </footer>
+        </div>
+      </article>
+    </template>
+  </body>
+</html>
