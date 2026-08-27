@@ -10,10 +10,10 @@ describe("presentation pages", () => {
     const html = renderToStaticMarkup(createElement(PptDisplay));
 
     expect(html).toContain('class="ppt-display"');
-    expect(html).toContain('/ppt/robi-profesion/slide-01.webp');
+    expect(html).toContain('/ppt/robi-profesion2/slide-01.webp');
     expect(html).toContain('alt="Diapositiva 1: Conozcamos mi profesión"');
     expect(html).toContain("Pantalla completa");
-    expect(html).toContain("1 / 7");
+    expect(html).toContain("1 / 9");
   });
 
   it("renders mobile previous, next, and direct slide controls", () => {
@@ -22,8 +22,8 @@ describe("presentation pages", () => {
     expect(html).toContain("Control de presentación");
     expect(html).toContain('aria-label="Diapositiva anterior"');
     expect(html).toContain('aria-label="Diapositiva siguiente"');
-    expect(html).toContain("1 de 7");
-    expect(html.match(/class="ppt-slide-jump/g)).toHaveLength(7);
+    expect(html).toContain("1 de 9");
+    expect(html.match(/class="ppt-slide-jump/g)).toHaveLength(9);
     expect(html).toContain('aria-current="page"');
   });
 
@@ -31,7 +31,8 @@ describe("presentation pages", () => {
     const replace = vi.fn();
 
     expect(redirectToSlideDestination(PRESENTATION_SLIDES[0], replace)).toBe(false);
-    expect(redirectToSlideDestination(PRESENTATION_SLIDES[6], replace)).toBe(true);
+    expect(redirectToSlideDestination(PRESENTATION_SLIDES[7], replace)).toBe(false);
+    expect(redirectToSlideDestination(PRESENTATION_SLIDES[8], replace)).toBe(true);
     expect(replace).toHaveBeenCalledOnce();
     expect(replace).toHaveBeenCalledWith("/display");
   });

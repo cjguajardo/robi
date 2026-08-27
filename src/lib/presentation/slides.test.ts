@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { PRESENTATION_SLIDES } from "./slides";
 
 describe("ROBI profession presentation manifest", () => {
-  it("publishes the seven PDF pages in presentation order", () => {
-    expect(PRESENTATION_SLIDES).toHaveLength(7);
+  it("publishes the nine presentation pages in order", () => {
+    expect(PRESENTATION_SLIDES).toHaveLength(9);
     expect(PRESENTATION_SLIDES.map((slide) => slide.number)).toEqual([
-      1, 2, 3, 4, 5, 6, 7,
+      1, 2, 3, 4, 5, 6, 7, 8, 9,
     ]);
     expect(PRESENTATION_SLIDES.map((slide) => slide.src)).toEqual(
       Array.from(
-        { length: 7 },
-        (_, index) => `/ppt/robi-profesion/slide-${String(index + 1).padStart(2, "0")}.webp`,
+        { length: 9 },
+        (_, index) => `/ppt/robi-profesion2/slide-${String(index + 1).padStart(2, "0")}.webp`,
       ),
     );
   });
@@ -22,9 +22,9 @@ describe("ROBI profession presentation manifest", () => {
     }
   });
 
-  it("redirects the seventh projector slide to the live ROBI display", () => {
-    expect(PRESENTATION_SLIDES.slice(0, 6).every((slide) => !slide.redirectTo)).toBe(true);
-    expect(PRESENTATION_SLIDES[6]?.redirectTo).toBe("/display");
+  it("keeps the ROBI introduction visible and redirects only from slide nine", () => {
+    expect(PRESENTATION_SLIDES.slice(0, 8).every((slide) => !slide.redirectTo)).toBe(true);
+    expect(PRESENTATION_SLIDES[8]?.redirectTo).toBe("/display");
   });
 
   it("keeps every optimized WebP slide in the public bundle", () => {
@@ -35,5 +35,11 @@ describe("ROBI profession presentation manifest", () => {
       expect(bytes.subarray(0, 4).toString("ascii")).toBe("RIFF");
       expect(bytes.subarray(8, 12).toString("ascii")).toBe("WEBP");
     }
+  });
+
+  it("keeps robi-profesion2 as the only published presentation version", () => {
+    const legacyDeck = new URL("../../../public/ppt/robi-profesion", import.meta.url);
+
+    expect(existsSync(legacyDeck)).toBe(false);
   });
 });

@@ -75,24 +75,24 @@ describe("realtime hub", () => {
 
     expect(ingestPresentationGoto(4)).toEqual({
       currentSlide: 4,
-      totalSlides: 7,
+      totalSlides: 9,
     });
     expect(first.events).toContainEqual({
       type: "PRESENTATION_CHANGED",
-      payload: { currentSlide: 4, totalSlides: 7 },
+      payload: { currentSlide: 4, totalSlides: 9 },
     });
 
     const late = makePeer();
     const snapshot = attachPeer(late.handle);
     expect(snapshot.presentation).toEqual({
       currentSlide: 4,
-      totalSlides: 7,
+      totalSlides: 9,
     });
     detachPeer(first.handle);
     detachPeer(late.handle);
   });
 
-  it.each([0, 8, 2.5, "3", null])(
+  it.each([0, 10, 2.5, "3", null])(
     "rejects invalid presentation slide %s",
     (slide) => {
       const { events, handle } = makePeer();
@@ -101,7 +101,7 @@ describe("realtime hub", () => {
 
       expect(ingestPresentationGoto(slide)).toEqual({
         currentSlide: 1,
-        totalSlides: 7,
+        totalSlides: 9,
       });
       expect(events).not.toContainEqual(
         expect.objectContaining({ type: "PRESENTATION_CHANGED" }),

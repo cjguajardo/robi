@@ -7,12 +7,14 @@ export interface PresentationSlide {
 
 const titles = [
   "Conozcamos mi profesión",
-  "Qué hace un Ingeniero de Software",
-  "Cómo realizo mi trabajo",
-  "Qué construyo",
-  "Mis herramientas de trabajo",
-  "Por qué me gusta lo que hago",
+  "Qué hace un ingeniero de software",
+  "Cómo hago mi trabajo",
+  "Qué puedo construir",
+  "Mis herramientas",
+  "Por qué es importante",
+  "Por qué me gusta",
   "Les presento a ROBI",
+  "Entrando a ROBI",
 ] as const;
 
 export const PRESENTATION_SLIDES: readonly PresentationSlide[] = titles.map(
@@ -21,8 +23,8 @@ export const PRESENTATION_SLIDES: readonly PresentationSlide[] = titles.map(
     return {
       number,
       title,
-      src: `/ppt/robi-profesion/slide-${String(number).padStart(2, "0")}.webp`,
-      ...(number === 7 ? { redirectTo: "/display" } : {}),
+      src: `/ppt/robi-profesion2/slide-${String(number).padStart(2, "0")}.webp`,
+      ...(number === 9 ? { redirectTo: "/display" } : {}),
     };
   },
 );
